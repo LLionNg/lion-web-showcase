@@ -9,3 +9,22 @@ dist-ssr
 !.env.example
 npm-debug.log*
 *.log
+
+# Claude Code / agent tooling
+.claude/
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS junk
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Build / test output
+coverage
+*.tsbuildinfo
