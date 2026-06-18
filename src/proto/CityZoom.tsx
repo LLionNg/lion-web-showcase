@@ -1,270 +1,58 @@
-import { Suspense, useMemo, useRef } from "react";
-import { Canvas, useFrame, useLoader } from "@react-three/fiber";
-import { ScrollControls, useScroll, useTexture } from "@react-three/drei";
-import { Bloom, EffectComposer } from "@react-three/postprocessing";
-import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import * as THREE from "three";
-import { lerp, smoothstep } from "../cosmos/util";
+import { useEffect, useRef } from "react";
+import { SynthCityScene } from "./synthcity/scene";
+import { EarthScene } from "./synthcity/earthScene";
 
 /**
- * PROTOTYPE — zoom-in intro: Earth (night) → SE Asia → a neon cyberpunk city.
- * City geometry/textures are a subset of SynthCity (jeffbeene/synthcity, MIT),
- * re-textured with the same recipe (diffuse + emissive window map + a random
- * neon tint) and lit by bloom. View at /?proto.
+ * PROTOTYPE (/?proto) — scroll-driven intro. Two independent scenes on stacked
+ * canvases: the cosmos-style Earth on top (its own lighting + gentle bloom) and
+ * the neon city beneath — a faithful vanilla-three port of SynthCity
+ * (jeffbeene/synthcity, MIT) with its real materials, Perlin block generation,
+ * coloured point lights and UnrealBloom. Scrolling zooms into the Earth, then
+ * crossfades it out to reveal the city descent.
  */
-
-const MODEL_URLS = [
-  "/models/city/s_01_01.obj", // 0 short
-  "/models/city/s_02_02.obj", // 1 short
-  "/models/city/s_03_01.obj", // 2 mid
-  "/models/city/s_04_01.obj", // 3 tall
-  "/models/city/s_04_03.obj", // 4 tall
-  "/models/city/s_05_01.obj", // 5 tower
-  "/models/city/s_05_02.obj", // 6 tower
-];
-const TEX_SETS = [
-  ["/textures/city/building_01.jpg", "/textures/city/building_01_em.jpg"],
-  ["/textures/city/building_02.jpg", "/textures/city/building_02_em.jpg"],
-  ["/textures/city/building_03.jpg", "/textures/city/building_03_em.jpg"],
-  ["/textures/city/building_04.jpg", "/textures/city/building_04_em.jpg"],
-];
-const NEON = [
-  "#ff3df0",
-  "#a05cff",
-  "#4f7bff",
-  "#28e0ff",
-  "#ff5fa8",
-  "#7af0ff",
-  "#ff8a3d",
-];
-
-// Normalise a loaded OBJ into a single geometry whose footprint is ~1 unit and
-// whose base sits at y=0, plus the natural height:footprint ratio.
-function processObj(group: THREE.Object3D) {
-  const geos: THREE.BufferGeometry[] = [];
-  group.updateMatrixWorld(true);
-  group.traverse((o) => {
-    const mesh = o as THREE.Mesh;
-    if (mesh.isMesh) {
-      const g = mesh.geometry.clone();
-      g.applyMatrix4(mesh.matrixWorld);
-      if (!g.attributes.uv) g.setAttribute("uv", g.attributes.position); // fallback
-      geos.push(g);
-    }
-  });
-  let geo = geos.length > 1 ? mergeGeometries(geos, false) : geos[0];
-  if (!geo) geo = new THREE.BoxGeometry(1, 2, 1);
-  geo.computeBoundingBox();
-  const bb = geo.boundingBox!;
-  geo.translate(
-    -(bb.min.x + bb.max.x) / 2,
-    -bb.min.y,
-    -(bb.min.z + bb.max.z) / 2,
-  );
-  const footprint = Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) || 1;
-  geo.computeVertexNormals();
-  // Normalise footprint to ~0.42 units so buildings sit *inside* the grid
-  // spacing (0.8) instead of overlapping into a mass.
-  return { geo, norm: 0.42 / footprint };
-}
-
-interface Placement {
-  x: number;
-  z: number;
-  model: number;
-  mat: number;
-  norm: number;
-  hMul: number;
-  rotY: number;
-}
-
-function NeonCity() {
-  const scroll = useScroll();
-  const objs = useLoader(OBJLoader, MODEL_URLS);
-  const texs = useTexture(TEX_SETS.flat());
-  const envTex = useTexture("/textures/city/env_night.jpg");
-  const groupRef = useRef<THREE.Group>(null!);
-
-  const models = useMemo(() => objs.map((o) => processObj(o)), [objs]);
-
-  // Material pool: each building texture × a few neon tints. The night-city
-  // env map reflecting on metallic-ish facades is what stops them reading as
-  // flat black (SynthCity's trick).
-  const materials = useMemo(() => {
-    for (const t of texs) t.colorSpace = THREE.SRGBColorSpace;
-    envTex.mapping = THREE.EquirectangularReflectionMapping;
-    envTex.colorSpace = THREE.SRGBColorSpace;
-    const pool: THREE.MeshStandardMaterial[] = [];
-    for (let i = 0; i < TEX_SETS.length; i++) {
-      const map = texs[i * 2];
-      const em = texs[i * 2 + 1];
-      for (let n = 0; n < 3; n++) {
-        pool.push(
-          new THREE.MeshStandardMaterial({
-            map,
-            emissiveMap: em,
-            emissive: new THREE.Color(NEON[(Math.random() * NEON.length) | 0]),
-            emissiveIntensity: 3.0,
-            envMap: envTex,
-            envMapIntensity: 0.9,
-            roughness: 0.45,
-            metalness: 0.55,
-            transparent: true,
-          }),
-        );
-      }
-    }
-    return pool;
-  }, [texs, envTex]);
-
-  const placements = useMemo<Placement[]>(() => {
-    const arr: Placement[] = [];
-    const N = 22;
-    const spacing = 0.8;
-    for (let ix = 0; ix < N; ix++) {
-      for (let iz = 0; iz < N; iz++) {
-        if (Math.random() < 0.28) continue; // street gaps
-        const x = (ix - N / 2) * spacing + (Math.random() - 0.5) * 0.14;
-        const z = (iz - N / 2) * spacing + (Math.random() - 0.5) * 0.14;
-        const dist = Math.hypot(x, z);
-        let model: number;
-        let hMul: number;
-        if (dist < 3.4) {
-          model = Math.random() < 0.5 ? 5 : 6; // towers
-          hMul = 1.2 + Math.random() * 1.4;
-        } else if (dist < 6.2) {
-          model = Math.random() < 0.5 ? 3 : 4; // tall
-          hMul = 0.8 + Math.random() * 0.9;
-        } else {
-          model = (Math.random() * 3) | 0; // short
-          hMul = 0.5 + Math.random() * 0.6;
-        }
-        arr.push({
-          x,
-          z,
-          model,
-          mat: (Math.random() * materials.length) | 0,
-          norm: models[model].norm,
-          hMul,
-          rotY: ((Math.random() * 4) | 0) * (Math.PI / 2),
-        });
-      }
-    }
-    return arr;
-  }, [models, materials]);
-
-  useFrame(() => {
-    const op = smoothstep(0.45, 0.85, scroll.offset);
-    groupRef.current.visible = op > 0.001;
-    for (const m of materials) m.opacity = op;
-  });
-
-  return (
-    <group ref={groupRef} visible={false}>
-      {placements.map((b, i) => (
-        <mesh
-          key={i}
-          geometry={models[b.model].geo}
-          material={materials[b.mat]}
-          position={[b.x, 0, b.z]}
-          scale={[b.norm, b.norm * b.hMul, b.norm]}
-          rotation={[0, b.rotY, 0]}
-        />
-      ))}
-    </group>
-  );
-}
-
-// Earth night-lights side, rotated toward SE Asia; fades as we drop in.
-function NightEarth() {
-  const scroll = useScroll();
-  const tex = useTexture("/textures/earth_night_2048.jpg");
-  tex.colorSpace = THREE.SRGBColorSpace;
-  const ref = useRef<THREE.Group>(null!);
-  const matRef = useRef<THREE.MeshBasicMaterial>(null!);
-  useFrame(() => {
-    const o = scroll.offset;
-    ref.current.scale.setScalar(lerp(1, 1.8, smoothstep(0, 0.6, o)));
-    const op = 1 - smoothstep(0.36, 0.58, o);
-    matRef.current.opacity = op;
-    ref.current.visible = op > 0.001;
-  });
-  return (
-    <group ref={ref} rotation={[0.42, -1.95, 0]}>
-      <mesh>
-        <sphereGeometry args={[2, 96, 96]} />
-        <meshBasicMaterial ref={matRef} map={tex} transparent toneMapped={false} />
-      </mesh>
-    </group>
-  );
-}
-
-// Camera flies forward + down INTO the city as you scroll (zoom in): from the
-// Earth, it descends and pushes through the skyline toward the towers ahead.
-function CameraRig() {
-  const scroll = useScroll();
-  const target = useMemo(() => new THREE.Vector3(), []);
-  useFrame((state) => {
-    const o = smoothstep(0, 1, scroll.offset);
-    state.camera.position.set(0, lerp(1, 4, o), lerp(7, 2, o));
-    target.set(0, lerp(0, 2.5, o), lerp(0, -7, o));
-    state.camera.lookAt(target);
-  });
-  return null;
-}
-
-function Ground() {
-  const scroll = useScroll();
-  const matRef = useRef<THREE.MeshBasicMaterial>(null!);
-  useFrame(() => {
-    matRef.current.opacity = smoothstep(0.45, 0.85, scroll.offset) * 0.9;
-  });
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
-      <planeGeometry args={[80, 80]} />
-      <meshBasicMaterial ref={matRef} color="#0a0820" transparent />
-    </mesh>
-  );
-}
-
 export default function CityZoom() {
+  const cityCanvasRef = useRef<HTMLCanvasElement>(null);
+  const earthCanvasRef = useRef<HTMLCanvasElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const city = new SynthCityScene(cityCanvasRef.current!);
+    void city.init();
+    const earth = new EarthScene(earthCanvasRef.current!);
+    earth.init();
+
+    const scrollEl = scrollRef.current!;
+    const onScroll = () => {
+      const max = scrollEl.scrollHeight - scrollEl.clientHeight;
+      const p = max > 0 ? scrollEl.scrollTop / max : 0;
+      city.setProgress(p);
+      earth.setProgress(p);
+    };
+    const onResize = () => {
+      city.resize();
+      earth.resize();
+    };
+
+    scrollEl.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      scrollEl.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
+      city.dispose();
+      earth.dispose();
+    };
+  }, []);
+
   return (
     <div className="app">
-      <Canvas
-        className="canvas"
-        frameloop="always"
-        camera={{ position: [0, 0, 6], fov: 55, near: 0.1, far: 120 }}
-        dpr={[1, 2]}
-        gl={{
-          antialias: true,
-          powerPreference: "high-performance",
-          toneMapping: THREE.ACESFilmicToneMapping,
-        }}
-      >
-        <color attach="background" args={["#1a1450"]} />
-        <fogExp2 attach="fog" args={["#2a2068", 0.035]} />
-        <ambientLight intensity={0.4} color="#8a92ff" />
-        <directionalLight position={[3, 6, 4]} intensity={0.5} color="#9aa6ff" />
-        <Suspense fallback={null}>
-          <ScrollControls pages={4} damping={0.3}>
-            <CameraRig />
-            <NightEarth />
-            <Ground />
-            <NeonCity />
-          </ScrollControls>
-        </Suspense>
+      <canvas ref={cityCanvasRef} className="canvas proto-city" />
+      <canvas ref={earthCanvasRef} className="canvas proto-earth" />
 
-        <EffectComposer>
-          {/* threshold ~0 so everything blooms → SynthCity's bright neon haze */}
-          <Bloom
-            intensity={1.1}
-            luminanceThreshold={0.0}
-            luminanceSmoothing={0.85}
-            mipmapBlur
-          />
-        </EffectComposer>
-      </Canvas>
+      {/* transparent scroll surface that drives both scenes */}
+      <div ref={scrollRef} className="proto-scroll">
+        <div className="proto-spacer" />
+      </div>
 
       <div className="overlay" aria-hidden="true">
         <div

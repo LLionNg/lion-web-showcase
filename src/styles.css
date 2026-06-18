@@ -44,6 +44,25 @@ body {
   scrollbar-width: none;
 }
 
+/* ---- /?proto stacked canvases (city beneath, Earth crossfades on top) ---- */
+.proto-city {
+  z-index: 1;
+}
+.proto-earth {
+  z-index: 2;
+}
+
+/* ---- /?proto scroll surface (transparent, drives the fly-in camera) ---- */
+.proto-scroll {
+  position: fixed;
+  inset: 0;
+  overflow-y: scroll;
+  z-index: 5;
+}
+.proto-spacer {
+  height: 500vh;
+}
+
 /* ---- Caption overlay (sits above the canvas, never blocks scroll) ---- */
 .overlay {
   position: fixed;
