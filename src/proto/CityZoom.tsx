@@ -64,7 +64,9 @@ function processObj(group: THREE.Object3D) {
   );
   const footprint = Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) || 1;
   geo.computeVertexNormals();
-  return { geo, norm: 1 / footprint };
+  // Normalise footprint to ~0.42 units so buildings sit *inside* the grid
+  // spacing (0.8) instead of overlapping into a mass.
+  return { geo, norm: 0.42 / footprint };
 }
 
 interface Placement {
@@ -81,13 +83,18 @@ function NeonCity() {
   const scroll = useScroll();
   const objs = useLoader(OBJLoader, MODEL_URLS);
   const texs = useTexture(TEX_SETS.flat());
+  const envTex = useTexture("/textures/city/env_night.jpg");
   const groupRef = useRef<THREE.Group>(null!);
 
   const models = useMemo(() => objs.map((o) => processObj(o)), [objs]);
 
-  // Material pool: each building texture × a few neon tints.
+  // Material pool: each building texture × a few neon tints. The night-city
+  // env map reflecting on metallic-ish facades is what stops them reading as
+  // flat black (SynthCity's trick).
   const materials = useMemo(() => {
     for (const t of texs) t.colorSpace = THREE.SRGBColorSpace;
+    envTex.mapping = THREE.EquirectangularReflectionMapping;
+    envTex.colorSpace = THREE.SRGBColorSpace;
     const pool: THREE.MeshStandardMaterial[] = [];
     for (let i = 0; i < TEX_SETS.length; i++) {
       const map = texs[i * 2];
@@ -97,36 +104,36 @@ function NeonCity() {
           new THREE.MeshStandardMaterial({
             map,
             emissiveMap: em,
-            emissive: new THREE.Color(
-              NEON[(Math.random() * NEON.length) | 0],
-            ),
-            emissiveIntensity: 2.4,
-            roughness: 0.7,
-            metalness: 0.2,
+            emissive: new THREE.Color(NEON[(Math.random() * NEON.length) | 0]),
+            emissiveIntensity: 3.0,
+            envMap: envTex,
+            envMapIntensity: 0.9,
+            roughness: 0.45,
+            metalness: 0.55,
             transparent: true,
           }),
         );
       }
     }
     return pool;
-  }, [texs]);
+  }, [texs, envTex]);
 
   const placements = useMemo<Placement[]>(() => {
     const arr: Placement[] = [];
-    const N = 26;
-    const spacing = 0.55;
+    const N = 22;
+    const spacing = 0.8;
     for (let ix = 0; ix < N; ix++) {
       for (let iz = 0; iz < N; iz++) {
-        if (Math.random() < 0.18) continue; // street gaps
-        const x = (ix - N / 2) * spacing + (Math.random() - 0.5) * 0.12;
-        const z = (iz - N / 2) * spacing + (Math.random() - 0.5) * 0.12;
+        if (Math.random() < 0.28) continue; // street gaps
+        const x = (ix - N / 2) * spacing + (Math.random() - 0.5) * 0.14;
+        const z = (iz - N / 2) * spacing + (Math.random() - 0.5) * 0.14;
         const dist = Math.hypot(x, z);
         let model: number;
         let hMul: number;
-        if (dist < 2.4) {
+        if (dist < 3.4) {
           model = Math.random() < 0.5 ? 5 : 6; // towers
           hMul = 1.2 + Math.random() * 1.4;
-        } else if (dist < 4.6) {
+        } else if (dist < 6.2) {
           model = Math.random() < 0.5 ? 3 : 4; // tall
           hMul = 0.8 + Math.random() * 0.9;
         } else {
@@ -193,14 +200,15 @@ function NightEarth() {
   );
 }
 
-// Camera descends from "whole Earth" to a low neon-skyline aerial.
+// Camera flies forward + down INTO the city as you scroll (zoom in): from the
+// Earth, it descends and pushes through the skyline toward the towers ahead.
 function CameraRig() {
   const scroll = useScroll();
   const target = useMemo(() => new THREE.Vector3(), []);
   useFrame((state) => {
     const o = smoothstep(0, 1, scroll.offset);
-    state.camera.position.set(0, lerp(0, 3.4, o), lerp(6, 9, o));
-    target.set(0, lerp(0, 1.5, o), 0);
+    state.camera.position.set(0, lerp(1, 4, o), lerp(7, 2, o));
+    target.set(0, lerp(0, 2.5, o), lerp(0, -7, o));
     state.camera.lookAt(target);
   });
   return null;
@@ -234,10 +242,10 @@ export default function CityZoom() {
           toneMapping: THREE.ACESFilmicToneMapping,
         }}
       >
-        <color attach="background" args={["#0b0a24"]} />
-        <fogExp2 attach="fog" args={["#160f3a", 0.045]} />
-        <ambientLight intensity={0.18} />
-        <directionalLight position={[3, 6, 4]} intensity={0.3} color="#6a78ff" />
+        <color attach="background" args={["#1a1450"]} />
+        <fogExp2 attach="fog" args={["#2a2068", 0.035]} />
+        <ambientLight intensity={0.4} color="#8a92ff" />
+        <directionalLight position={[3, 6, 4]} intensity={0.5} color="#9aa6ff" />
         <Suspense fallback={null}>
           <ScrollControls pages={4} damping={0.3}>
             <CameraRig />
@@ -248,10 +256,11 @@ export default function CityZoom() {
         </Suspense>
 
         <EffectComposer>
+          {/* threshold ~0 so everything blooms → SynthCity's bright neon haze */}
           <Bloom
-            intensity={1.5}
-            luminanceThreshold={0.1}
-            luminanceSmoothing={0.9}
+            intensity={1.1}
+            luminanceThreshold={0.0}
+            luminanceSmoothing={0.85}
             mipmapBlur
           />
         </EffectComposer>
