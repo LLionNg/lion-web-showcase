@@ -25,7 +25,7 @@ const scrollEl = () =>
   );
 
 export default function App() {
-  // earthActive: interactive Cesium earth (true) vs R3F cosmic zoom (false).
+  // earthActive: interactive globe.gl earth (true) vs R3F cosmic zoom (false).
   const [earthActive, setEarthActive] = useState(true);
   // the portfolio "world" you dive into at the bottom of the zoom.
   const [inPortfolio, setInPortfolio] = useState(DBG.portfolio);
@@ -117,8 +117,8 @@ export default function App() {
         />
       </Suspense>
 
-      {/* Shortcut into the portfolio without zooming the globe (saves Cesium ion
-          quota). Reuses the same warp transition as the deep-zoom dive. */}
+      {/* Shortcut straight into the portfolio (skips the globe zoom). Reuses
+          the same warp transition as the deep-zoom dive. */}
       {earthPhase === "active" && (
         <button
           className="enter-portfolio"

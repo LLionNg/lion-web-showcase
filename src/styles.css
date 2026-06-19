@@ -213,7 +213,7 @@ body {
   text-align: right;
 }
 
-/* ---- Interactive Cesium Earth on the homepage (crossfades to the cosmos,
+/* ---- Interactive globe.gl Earth on the homepage (crossfades to the cosmos,
        dives into the portfolio) ---- */
 .home-earth {
   position: fixed;
@@ -245,14 +245,12 @@ body {
   opacity: 0;
   pointer-events: none;
 } /* portfolio is up */
-.home-earth .cesium-widget,
-.home-earth .cesium-widget canvas {
-  width: 100% !important;
-  height: 100% !important;
+.home-earth canvas {
+  display: block;
 }
 
-/* "Enter Portfolio" shortcut on the Earth view — skips the zoom (and the Cesium
-   ion tile quota it would burn) and warps straight into the portfolio. */
+/* "Enter Portfolio" shortcut on the Earth view - skips the globe zoom and warps
+   straight into the portfolio. */
 .enter-portfolio {
   position: fixed;
   top: 22px;

@@ -1,35 +1,51 @@
 import { useEffect, useRef } from "react";
-import * as Cesium from "cesium";
-import { geoContains } from "d3-geo";
+import * as THREE from "three";
+import Globe, { type GlobeInstance } from "globe.gl";
 import CountryPopup, {
   type PopupHandle,
   type CountryStats,
 } from "./CountryPopup";
 
 /**
- * Homepage opening "Earth": the interactive Cesium globe (drag to orbit, scroll
- * to dive into a city — satellite + Google Photorealistic 3D buildings). Zoom is
- * capped at the full globe; scrolling OUT past that hands off to the R3F cosmic
- * zoom (solar system → universe) via `onZoomOutToCosmos`. And at the BOTTOM —
- * once you're at street level and keep zooming in — it dives THROUGH into the
- * portfolio via `onZoomIntoPortfolio`. `phase` drives visibility + render loop.
+ * Homepage opening "Earth": a WebGL globe (globe.gl / three.js) with a real-time
+ * day/night terminator + city lights, country hover (outline + stats popup), and
+ * an atmosphere glow. Drag to orbit, scroll to zoom. Zoom OUT past the framed
+ * globe hands off to the R3F cosmic zoom (`onZoomOutToCosmos`); zoom IN close to
+ * the surface dives THROUGH into the portfolio (`onZoomIntoPortfolio`) — also
+ * reachable via the Enter Portfolio button. `phase` drives visibility + render.
+ *
+ * Reworked from CesiumJS to globe.gl: no ion token, no tile quota, and (by
+ * design) no satellite city zoom.
  */
 
-const ION_TOKEN = import.meta.env.VITE_CESIUM_ION_TOKEN as string;
-const GOOGLE_3DTILES_ASSET = 2275207;
-const TILES_HEIGHT = 180_000; // below this (m) show the photoreal 3D tiles
-const MAX_HEIGHT = 28_000_000; // zoom-out cap: full globe framed (m)
-// Scroll out past this altitude → hand off to the cosmos. Kept well below the
-// cap so the hand-off reliably fires (you can't get "stuck" at the globe).
-const HANDOFF_HEIGHT = 20_000_000;
-// "Zoom until you can't": once you're within DIVE_NEAR metres of the surface
-// (close to any city, whatever its elevation) and a zoom-in tick no longer
-// moves the camera more than DIVE_STUCK metres — i.e. it's pinned at the
-// minimum zoom (street level) — dive through into the portfolio. Tunable.
-const DIVE_NEAR = 8_000;
-const DIVE_STUCK = 2;
+const DAY_TEX = "/textures/earth_atmos_2048.jpg";
+const NIGHT_TEX = "/textures/earth_blackmarble.jpg";
+
+// POV altitude is in globe-radius units. Default framed view ~2.5.
+const START_ALT = 2.5;
+const MAX_ALT = 3.6; // zoom-out cap; scrolling out past this -> cosmos
+const DIVE_ALT = 0.3; // zoom-in floor; scrolling in past this -> portfolio
+const GLOBE_R = 100; // three-globe globe radius (for the controls distance clamp)
 
 export type EarthPhase = "active" | "faded" | "warp" | "hidden";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Feat = any;
+
+// Real-time subsolar point (where the sun is overhead) -> day/night terminator.
+function subsolar(date: Date): { lat: number; lng: number } {
+  const yearStart = Date.UTC(date.getUTCFullYear(), 0, 0);
+  const dayOfYear =
+    (Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) -
+      yearStart) /
+    86_400_000;
+  const decl = -23.44 * Math.cos(((2 * Math.PI) / 365) * (dayOfYear + 10));
+  const utcHours =
+    date.getUTCHours() +
+    date.getUTCMinutes() / 60 +
+    date.getUTCSeconds() / 3600;
+  return { lat: decl, lng: (12 - utcHours) * 15 };
+}
 
 export default function HomeEarth({
   phase,
@@ -43,269 +59,185 @@ export default function HomeEarth({
   homeSignal: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<Cesium.Viewer | null>(null);
+  const globeRef = useRef<GlobeInstance | null>(null);
   const handoffRef = useRef(onZoomOutToCosmos);
   handoffRef.current = onZoomOutToCosmos;
   const diveRef = useRef(onZoomIntoPortfolio);
   diveRef.current = onZoomIntoPortfolio;
   const divedRef = useRef(false);
   const popupRef = useRef<PopupHandle>(null);
-  // clears the hover outline + popup; assigned inside the viewer effect and
-  // called when the globe stops being the live layer.
   const clearHoverRef = useRef<() => void>(() => {});
 
-  // create the viewer once
+  // build the globe once
   useEffect(() => {
-    if (!ION_TOKEN) {
-      console.error("Missing VITE_CESIUM_ION_TOKEN");
-      return;
-    }
-    Cesium.Ion.defaultAccessToken = ION_TOKEN;
+    const el = ref.current;
+    if (!el) return;
 
-    const viewer = new Cesium.Viewer(ref.current!, {
-      baseLayerPicker: false,
-      geocoder: false,
-      homeButton: false,
-      sceneModePicker: false,
-      navigationHelpButton: false,
-      animation: false,
-      timeline: false,
-      fullscreenButton: false,
-      infoBox: false,
-      selectionIndicator: false,
-      skyAtmosphere: new Cesium.SkyAtmosphere(),
-      terrain: Cesium.Terrain.fromWorldTerrain(),
+    const world: GlobeInstance = new Globe(el, { animateIn: false })
+      .width(window.innerWidth)
+      .height(window.innerHeight)
+      .backgroundColor("rgba(0,0,0,0)")
+      .showAtmosphere(true)
+      .atmosphereColor("#6ea8ff")
+      .atmosphereAltitude(0.2);
+    globeRef.current = world;
+
+    // ---- day/night material (blend day + night textures by sun angle) ----
+    const loader = new THREE.TextureLoader();
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        dayTexture: { value: loader.load(DAY_TEX) },
+        nightTexture: { value: loader.load(NIGHT_TEX) },
+        sunDirection: { value: new THREE.Vector3(1, 0, 0) },
+      },
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec2 vUv;
+        void main() {
+          vNormal = normalize(normal);
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D dayTexture;
+        uniform sampler2D nightTexture;
+        uniform vec3 sunDirection;
+        varying vec3 vNormal;
+        varying vec2 vUv;
+        void main() {
+          float intensity = dot(normalize(vNormal), normalize(sunDirection));
+          float blend = smoothstep(-0.12, 0.25, intensity);
+          vec3 day = texture2D(dayTexture, vUv).rgb;
+          vec3 night = texture2D(nightTexture, vUv).rgb;
+          gl_FragColor = vec4(mix(night, day, blend), 1.0);
+        }
+      `,
     });
-    viewerRef.current = viewer;
+    world.globeMaterial(material);
 
-    const scene = viewer.scene;
-    const globe = scene.globe;
-    globe.enableLighting = true;
-    globe.depthTestAgainstTerrain = true;
-    viewer.clock.shouldAnimate = true;
-    scene.highDynamicRange = true;
-
-    // free orbit + zoom, but capped at the full globe (handoff happens there)
-    const cc = scene.screenSpaceCameraController;
-    cc.maximumZoomDistance = MAX_HEIGHT;
-    cc.minimumZoomDistance = 30;
-
-    // night-side city lights (self-hosted Black Marble). Kept as a ref so we can
-    // hide it on deep zoom — it's a low-res whole-globe texture that's near-black
-    // up close and was bleeding through the 3D-tile gaps as dark polygons.
-    let nightLayer: Cesium.ImageryLayer | undefined;
-    Cesium.SingleTileImageryProvider.fromUrl("/textures/earth_blackmarble.jpg")
-      .then((p) => {
-        nightLayer = viewer.imageryLayers.addImageryProvider(p);
-        nightLayer.dayAlpha = 0.0;
-        nightLayer.nightAlpha = 1.0;
-      })
-      .catch((e) => console.warn("night layer:", e));
-
-    // Google Photorealistic 3D Tiles — shown only on deep zoom
-    let tileset: Cesium.Cesium3DTileset | undefined;
-    Cesium.Cesium3DTileset.fromIonAssetId(GOOGLE_3DTILES_ASSET)
-      .then((t) => {
-        tileset = t;
-        t.show = false;
-        t.enableCollision = true; // tiles carry collision once the globe is hidden
-        scene.primitives.add(t);
-      })
-      .catch((e) => console.error("3d tiles:", e));
-
-    // ---- Country hover: outline highlight + stats popup (globe view only) ----
-    // We deliberately do NOT load the GeoJSON as Cesium polygons — clamped
-    // country fills overflow Cesium's rhumb subdivision for huge / antimeridian
-    // countries (Russia, Antarctica, Fiji) and halt rendering. Instead we
-    // hit-test the picked point with d3-geo and draw the hovered border as
-    // on-demand, ground-clamped geodesic polylines (a handful of lines).
-    const highlightDS = new Cesium.CustomDataSource("country-hover");
-    viewer.dataSources.add(highlightDS);
-    const HOVER_LINE = Cesium.Color.fromCssColorString("#8fe8ff");
-    let hovered: unknown = null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let features: any[] = [];
-    fetch("/data/countries.geojson")
-      .then((r) => r.json())
-      .then((g) => {
-        features = g.features;
-      })
-      .catch((e) => console.warn("countries:", e));
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ringsOf = (geom: any): number[][][] =>
-      geom.type === "Polygon"
-        ? geom.coordinates
-        : geom.type === "MultiPolygon"
-          ? geom.coordinates.flat()
-          : [];
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const setHighlight = (feature: any) => {
-      if (feature === hovered) return;
-      hovered = feature;
-      highlightDS.entities.removeAll();
-      if (!feature) return;
-      for (const ring of ringsOf(feature.geometry)) {
-        const flat: number[] = [];
-        for (const [lon, lat] of ring) flat.push(lon, lat);
-        highlightDS.entities.add({
-          polyline: {
-            positions: Cesium.Cartesian3.fromDegreesArray(flat),
-            width: 2.5,
-            clampToGround: true,
-            arcType: Cesium.ArcType.GEODESIC,
-            material: HOVER_LINE,
-          },
-        });
-      }
+    // sun moves slowly; recompute the direction in the globe's local frame
+    const sunVec = material.uniforms.sunDirection.value as THREE.Vector3;
+    const updateSun = () => {
+      const s = subsolar(new Date());
+      const c = world.getCoords(s.lat, s.lng, 0);
+      sunVec.set(c.x, c.y, c.z).normalize();
     };
+    updateSun();
+    const sunTimer = window.setInterval(updateSun, 60_000);
 
+    // ---- country hover: outline highlight + stats popup ----
+    let hovered: Feat | null = null;
+    let mx = 0;
+    let my = 0;
+    const statsOf = (f: Feat): CountryStats => {
+      const p = f.properties;
+      return {
+        name: p.NAME_LONG || p.NAME || p.ADMIN || "",
+        population: Number(p.POP_EST ?? -1),
+        gdp: Number(p.GDP_MD ?? -1),
+        continent: p.CONTINENT || "",
+        subregion: p.SUBREGION || "",
+        income: p.INCOME_GRP || "",
+        iso2: String(p.ISO_A2_EH || p.ISO_A2 || "").toLowerCase(),
+      };
+    };
+    const applyHover = (h: Feat | null) => {
+      world
+        .polygonAltitude((d: Feat) => (d === h ? 0.014 : 0.006))
+        .polygonCapColor((d: Feat) =>
+          d === h ? "rgba(110,168,255,0.28)" : "rgba(0,0,0,0)",
+        )
+        .polygonStrokeColor((d: Feat) =>
+          d === h ? "#8fe8ff" : "rgba(150,180,255,0.10)",
+        );
+    };
     clearHoverRef.current = () => {
-      setHighlight(null);
+      hovered = null;
+      applyHover(null);
       popupRef.current?.set(null, 0, 0);
     };
 
-    const hoverHandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
-    hoverHandler.setInputAction(
-      (m: Cesium.ScreenSpaceEventHandler.MotionEvent) => {
-        // only from orbit — not once we've dropped into the 3D city
-        if ((viewer.camera.positionCartographic?.height ?? 0) < TILES_HEIGHT) {
-          if (hovered) clearHoverRef.current();
-          return;
-        }
-        const cart = viewer.camera.pickEllipsoid(m.endPosition, scene.ellipsoid);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let feature: any = null;
-        if (cart && features.length) {
-          const c = Cesium.Cartographic.fromCartesian(cart);
-          const lon = Cesium.Math.toDegrees(c.longitude);
-          const lat = Cesium.Math.toDegrees(c.latitude);
-          feature =
-            features.find((f) => {
-              const b = f.bbox as number[] | undefined;
-              if (
-                b &&
-                b[0] > -180 &&
-                b[2] < 180 &&
-                (lon < b[0] || lon > b[2] || lat < b[1] || lat > b[3])
-              )
-                return false;
-              return geoContains(f, [lon, lat]);
-            }) ?? null;
-        }
-        setHighlight(feature);
-        if (feature) {
-          const p = feature.properties;
-          const stats: CountryStats = {
-            name: p.NAME_LONG || p.NAME || p.ADMIN || "",
-            population: Number(p.POP_EST ?? -1),
-            gdp: Number(p.GDP_MD ?? -1),
-            continent: p.CONTINENT || "",
-            subregion: p.SUBREGION || "",
-            income: p.INCOME_GRP || "",
-            iso2: String(p.ISO_A2_EH || p.ISO_A2 || "").toLowerCase(),
-          };
-          popupRef.current?.set(stats, m.endPosition.x, m.endPosition.y);
-        } else {
-          popupRef.current?.set(null, 0, 0);
-        }
-      },
-      Cesium.ScreenSpaceEventType.MOUSE_MOVE,
-    );
+    fetch("/data/countries.geojson")
+      .then((r) => r.json())
+      .then((g) => {
+        world
+          .polygonsData(g.features)
+          .polygonCapColor(() => "rgba(0,0,0,0)")
+          .polygonSideColor(() => "rgba(0,0,0,0)")
+          .polygonStrokeColor(() => "rgba(150,180,255,0.10)")
+          .polygonAltitude(0.006)
+          .onPolygonHover((poly: Feat | null) => {
+            if (poly === hovered) return;
+            hovered = poly;
+            applyHover(poly);
+            if (poly) popupRef.current?.set(statsOf(poly), mx, my);
+            else popupRef.current?.set(null, 0, 0);
+          });
+      })
+      .catch((e) => console.warn("countries:", e));
 
-    // Day/night from the real sun looks right from orbit, but Google's photoreal
-    // tiles are DAYTIME captures — re-lighting them with the (below-horizon) sun
-    // on the night side renders them dark/brown, and the near-black night globe
-    // shows through gaps between tiles. So once we drop into a city, switch to a
-    // flat camera "headlight" (whatever you look at stays lit) and turn off the
-    // globe's day/night; restore the sun when back out at the globe.
-    const sunLight = new Cesium.SunLight();
-    const headlight = new Cesium.DirectionalLight({
-      direction: Cesium.Cartesian3.clone(Cesium.Cartesian3.UNIT_Z),
-      intensity: 2.0,
-    });
-    let inTiles = false;
-
-    const removeToggle = scene.preRender.addEventListener(() => {
-      const h = viewer.camera.positionCartographic?.height ?? Infinity;
-      const showTiles = h < TILES_HEIGHT;
-      if (tileset) tileset.show = showTiles;
-      // The Google tileset IS a full globe; showing our day/night globe at the
-      // same place makes the two surfaces z-fight into scattered dark polygons.
-      // So show exactly one: globe out at orbit, photoreal tiles up close.
-      globe.show = !showTiles;
-      if (nightLayer) nightLayer.show = !showTiles; // dark globe texture → off up close
-      highlightDS.show = !showTiles; // hide the country outline once in the city
-      if (showTiles !== inTiles) {
-        inTiles = showTiles;
-        globe.enableLighting = !showTiles;
-        scene.light = showTiles ? headlight : sunLight;
-      }
-      // keep the headlight aimed where the camera looks while we're down low
-      if (showTiles)
-        Cesium.Cartesian3.clone(scene.camera.directionWC, headlight.direction);
-    });
-
-    // open framed on the full globe
-    viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(-40, 12, MAX_HEIGHT * 0.78),
-    });
-
-    // Wheel at the two extremes hands off to the neighbouring "world":
-    //  · zoom OUT at the full globe → the cosmos (solar system → universe)
-    //  · zoom IN at street level    → dive through into the portfolio
-    let lastH = Infinity;
-    const onWheel = (e: WheelEvent) => {
-      const carto = viewer.camera.positionCartographic;
-      if (!carto) return;
-      const h = carto.height;
-      if (e.deltaY > 0) {
-        // zoom OUT at the full globe → cosmos
-        if (h >= HANDOFF_HEIGHT) handoffRef.current();
-      } else if (e.deltaY < 0 && !divedRef.current && h < DIVE_NEAR) {
-        // zoom IN but the camera no longer drops → pinned at the min zoom
-        // (street level) → dive through into the portfolio.
-        if (Math.abs(h - lastH) < DIVE_STUCK) {
-          divedRef.current = true;
-          diveRef.current();
-        }
-      }
-      lastH = h;
+    const onMouseMove = (e: MouseEvent) => {
+      mx = e.clientX;
+      my = e.clientY;
+      if (hovered) popupRef.current?.set(statsOf(hovered), mx, my);
     };
-    scene.canvas.addEventListener("wheel", onWheel, { passive: true });
+    el.addEventListener("mousemove", onMouseMove);
+
+    // ---- controls + zoom hand-offs ----
+    const controls = world.controls();
+    controls.minDistance = GLOBE_R * 1.05;
+    controls.maxDistance = GLOBE_R * (1 + MAX_ALT + 0.5);
+    controls.enablePan = false;
+    world.pointOfView({ lat: 12, lng: -40, altitude: START_ALT });
+
+    const onWheel = (e: WheelEvent) => {
+      const alt = world.pointOfView().altitude ?? START_ALT;
+      if (e.deltaY > 0) {
+        // zoom OUT at the framed globe -> cosmos
+        if (alt >= MAX_ALT) handoffRef.current();
+      } else if (e.deltaY < 0 && !divedRef.current && alt <= DIVE_ALT) {
+        // zoom IN close to the surface -> portfolio
+        divedRef.current = true;
+        diveRef.current();
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: true });
+
+    const onResize = () =>
+      world.width(window.innerWidth).height(window.innerHeight);
+    window.addEventListener("resize", onResize);
 
     return () => {
-      scene.canvas.removeEventListener("wheel", onWheel);
-      hoverHandler.destroy();
-      removeToggle();
-      viewer.destroy();
-      viewerRef.current = null;
+      window.clearInterval(sunTimer);
+      el.removeEventListener("mousemove", onMouseMove);
+      el.removeEventListener("wheel", onWheel);
+      window.removeEventListener("resize", onResize);
+      world._destructor?.();
+      globeRef.current = null;
     };
   }, []);
 
-  // phase → render loop + re-arm the dive (visibility itself is CSS-driven)
+  // phase -> render loop + re-arm the dive (visibility itself is CSS-driven)
   useEffect(() => {
-    const v = viewerRef.current;
-    if (!v) return;
+    const world = globeRef.current;
+    if (!world) return;
     const live = phase === "active";
-    v.useDefaultRenderLoop = live; // stop GPU work when not the active layer
     if (live) {
-      v.resize();
-      divedRef.current = false; // re-arm the dive after returning from portfolio
+      world.resumeAnimation();
+      world.width(window.innerWidth).height(window.innerHeight);
+      divedRef.current = false;
     } else {
-      clearHoverRef.current(); // drop any hover outline + popup when not live
+      world.pauseAnimation();
+      clearHoverRef.current();
     }
   }, [phase]);
 
-  // returning from the portfolio → fly the camera back out to the globe
+  // returning from the portfolio -> fly the camera back out to the globe
   useEffect(() => {
-    const v = viewerRef.current;
-    if (!v || !homeSignal) return;
-    v.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(-40, 12, MAX_HEIGHT * 0.78),
-      duration: 2.2,
-    });
+    const world = globeRef.current;
+    if (!world || !homeSignal) return;
+    world.pointOfView({ lat: 12, lng: -40, altitude: START_ALT }, 1600);
   }, [homeSignal]);
 
   return (
