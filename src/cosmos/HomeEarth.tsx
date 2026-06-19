@@ -1,5 +1,10 @@
 import { useEffect, useRef } from "react";
 import * as Cesium from "cesium";
+import { geoContains } from "d3-geo";
+import CountryPopup, {
+  type PopupHandle,
+  type CountryStats,
+} from "./CountryPopup";
 
 /**
  * Homepage opening "Earth": the interactive Cesium globe (drag to orbit, scroll
@@ -44,6 +49,10 @@ export default function HomeEarth({
   const diveRef = useRef(onZoomIntoPortfolio);
   diveRef.current = onZoomIntoPortfolio;
   const divedRef = useRef(false);
+  const popupRef = useRef<PopupHandle>(null);
+  // clears the hover outline + popup; assigned inside the viewer effect and
+  // called when the globe stops being the live layer.
+  const clearHoverRef = useRef<() => void>(() => {});
 
   // create the viewer once
   useEffect(() => {
@@ -104,6 +113,107 @@ export default function HomeEarth({
       })
       .catch((e) => console.error("3d tiles:", e));
 
+    // ---- Country hover: outline highlight + stats popup (globe view only) ----
+    // We deliberately do NOT load the GeoJSON as Cesium polygons — clamped
+    // country fills overflow Cesium's rhumb subdivision for huge / antimeridian
+    // countries (Russia, Antarctica, Fiji) and halt rendering. Instead we
+    // hit-test the picked point with d3-geo and draw the hovered border as
+    // on-demand, ground-clamped geodesic polylines (a handful of lines).
+    const highlightDS = new Cesium.CustomDataSource("country-hover");
+    viewer.dataSources.add(highlightDS);
+    const HOVER_LINE = Cesium.Color.fromCssColorString("#8fe8ff");
+    let hovered: unknown = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let features: any[] = [];
+    fetch("/data/countries.geojson")
+      .then((r) => r.json())
+      .then((g) => {
+        features = g.features;
+      })
+      .catch((e) => console.warn("countries:", e));
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ringsOf = (geom: any): number[][][] =>
+      geom.type === "Polygon"
+        ? geom.coordinates
+        : geom.type === "MultiPolygon"
+          ? geom.coordinates.flat()
+          : [];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const setHighlight = (feature: any) => {
+      if (feature === hovered) return;
+      hovered = feature;
+      highlightDS.entities.removeAll();
+      if (!feature) return;
+      for (const ring of ringsOf(feature.geometry)) {
+        const flat: number[] = [];
+        for (const [lon, lat] of ring) flat.push(lon, lat);
+        highlightDS.entities.add({
+          polyline: {
+            positions: Cesium.Cartesian3.fromDegreesArray(flat),
+            width: 2.5,
+            clampToGround: true,
+            arcType: Cesium.ArcType.GEODESIC,
+            material: HOVER_LINE,
+          },
+        });
+      }
+    };
+
+    clearHoverRef.current = () => {
+      setHighlight(null);
+      popupRef.current?.set(null, 0, 0);
+    };
+
+    const hoverHandler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+    hoverHandler.setInputAction(
+      (m: Cesium.ScreenSpaceEventHandler.MotionEvent) => {
+        // only from orbit — not once we've dropped into the 3D city
+        if ((viewer.camera.positionCartographic?.height ?? 0) < TILES_HEIGHT) {
+          if (hovered) clearHoverRef.current();
+          return;
+        }
+        const cart = viewer.camera.pickEllipsoid(m.endPosition, scene.ellipsoid);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let feature: any = null;
+        if (cart && features.length) {
+          const c = Cesium.Cartographic.fromCartesian(cart);
+          const lon = Cesium.Math.toDegrees(c.longitude);
+          const lat = Cesium.Math.toDegrees(c.latitude);
+          feature =
+            features.find((f) => {
+              const b = f.bbox as number[] | undefined;
+              if (
+                b &&
+                b[0] > -180 &&
+                b[2] < 180 &&
+                (lon < b[0] || lon > b[2] || lat < b[1] || lat > b[3])
+              )
+                return false;
+              return geoContains(f, [lon, lat]);
+            }) ?? null;
+        }
+        setHighlight(feature);
+        if (feature) {
+          const p = feature.properties;
+          const stats: CountryStats = {
+            name: p.NAME_LONG || p.NAME || p.ADMIN || "",
+            population: Number(p.POP_EST ?? -1),
+            gdp: Number(p.GDP_MD ?? -1),
+            continent: p.CONTINENT || "",
+            subregion: p.SUBREGION || "",
+            income: p.INCOME_GRP || "",
+            iso2: String(p.ISO_A2_EH || p.ISO_A2 || "").toLowerCase(),
+          };
+          popupRef.current?.set(stats, m.endPosition.x, m.endPosition.y);
+        } else {
+          popupRef.current?.set(null, 0, 0);
+        }
+      },
+      Cesium.ScreenSpaceEventType.MOUSE_MOVE,
+    );
+
     // Day/night from the real sun looks right from orbit, but Google's photoreal
     // tiles are DAYTIME captures — re-lighting them with the (below-horizon) sun
     // on the night side renders them dark/brown, and the near-black night globe
@@ -126,6 +236,7 @@ export default function HomeEarth({
       // So show exactly one: globe out at orbit, photoreal tiles up close.
       globe.show = !showTiles;
       if (nightLayer) nightLayer.show = !showTiles; // dark globe texture → off up close
+      highlightDS.show = !showTiles; // hide the country outline once in the city
       if (showTiles !== inTiles) {
         inTiles = showTiles;
         globe.enableLighting = !showTiles;
@@ -166,6 +277,7 @@ export default function HomeEarth({
 
     return () => {
       scene.canvas.removeEventListener("wheel", onWheel);
+      hoverHandler.destroy();
       removeToggle();
       viewer.destroy();
       viewerRef.current = null;
@@ -181,6 +293,8 @@ export default function HomeEarth({
     if (live) {
       v.resize();
       divedRef.current = false; // re-arm the dive after returning from portfolio
+    } else {
+      clearHoverRef.current(); // drop any hover outline + popup when not live
     }
   }, [phase]);
 
@@ -195,10 +309,13 @@ export default function HomeEarth({
   }, [homeSignal]);
 
   return (
-    <div
-      ref={ref}
-      className={`home-earth home-earth--${phase}`}
-      aria-hidden={phase !== "active"}
-    />
+    <>
+      <div
+        ref={ref}
+        className={`home-earth home-earth--${phase}`}
+        aria-hidden={phase !== "active"}
+      />
+      <CountryPopup ref={popupRef} />
+    </>
   );
 }
