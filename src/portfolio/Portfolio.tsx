@@ -4,6 +4,27 @@ import ParticleField from "./ParticleField";
 import { profile, stats, projects, experience, skills } from "./data";
 import "./portfolio.css";
 
+// Wrap bare *.devlionng.com domains (and full URLs) in clickable links so URLs
+// inside body copy are redirectable.
+const URL_RE = /(https?:\/\/[^\s)]+|(?:[a-z0-9-]+\.)+devlionng\.com)/gi;
+function linkify(text: string) {
+  return text.split(URL_RE).map((part, i) =>
+    i % 2 === 1 ? (
+      <a
+        key={i}
+        className="pf-inline-link"
+        href={part.startsWith("http") ? part : `https://${part}`}
+        target="_blank"
+        rel="noreferrer"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
 /**
  * The "digital realm" you dive into at the bottom of the zoom. A futuristic,
  * scroll-driven portfolio overlay seeded with real CV content. `active` gates
@@ -20,6 +41,37 @@ export default function Portfolio({
   const scrollRef = useRef<HTMLDivElement>(null);
   const onReturnRef = useRef(onReturn);
   onReturnRef.current = onReturn;
+
+  // 3D tilt: the background plane leans toward the pointer (smoothed via rAF).
+  // Transform string is set on the element directly (no CSS calc/var) so it is
+  // robust across browsers.
+  useEffect(() => {
+    if (!active) return;
+    const bg = document.querySelector<HTMLElement>(".pf-bg");
+    if (!bg) return;
+    let tx = 0,
+      ty = 0,
+      cx = 0,
+      cy = 0,
+      raf = 0;
+    const onMove = (e: PointerEvent) => {
+      tx = (e.clientX / window.innerWidth - 0.5) * 2;
+      ty = (e.clientY / window.innerHeight - 0.5) * 2;
+    };
+    const loop = () => {
+      cx += (tx - cx) * 0.06;
+      cy += (ty - cy) * 0.06;
+      bg.style.transform = `perspective(1200px) rotateX(${(cy * -5).toFixed(2)}deg) rotateY(${(cx * 5).toFixed(2)}deg) scale(1.12)`;
+      raf = requestAnimationFrame(loop);
+    };
+    window.addEventListener("pointermove", onMove);
+    raf = requestAnimationFrame(loop);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      cancelAnimationFrame(raf);
+      bg.style.transform = "";
+    };
+  }, [active]);
 
   // Smooth scroll (Lenis) bound to the overlay's own scroll container. You dive
   // in at the BOTTOM — the portfolio's seamless seam with Earth — and scroll UP
@@ -109,12 +161,14 @@ export default function Portfolio({
       className={`portfolio ${active ? "portfolio--on" : ""}`}
       aria-hidden={!active}
     >
-      <ParticleField active={active} />
-      <div className="pf-aurora" aria-hidden="true" />
-      <div className="pf-grid" aria-hidden="true" />
+      <div className="pf-bg" aria-hidden="true">
+        <ParticleField active={active} />
+        <div className="pf-aurora" />
+        <div className="pf-grid" />
+      </div>
 
       <button className="pf-return" onClick={onReturn} title="Back to orbit">
-        <span className="pf-return__icon">↑</span> Return to orbit
+        Return to orbit
       </button>
 
       <div className="pf-scroll" ref={scrollRef}>
@@ -122,7 +176,7 @@ export default function Portfolio({
           {/* ===== HERO ===== */}
           <header className="pf-hero">
             <p className="pf-kicker">
-              <span className="pf-dot" /> arrived · {profile.handle.toLowerCase()}.exe
+              <span className="pf-dot" /> arrived | {profile.handle.toLowerCase()}.exe
             </p>
             <div className="pf-hero__main">
               <div className="pf-avatar">
@@ -149,14 +203,13 @@ export default function Portfolio({
                 target="_blank"
                 rel="noreferrer"
               >
-                GitHub ↗
-              </a>
+                GitHub              </a>
               <a className="pf-btn" href={`mailto:${profile.email}`}>
                 Email
               </a>
             </div>
             <p className="pf-loc">
-              📍 {profile.location} · {profile.education.school} ·{" "}
+              {profile.location} | {profile.education.school} |{" "}
               {profile.education.degree} ({profile.education.gpa})
             </p>
           </header>
@@ -199,8 +252,7 @@ export default function Portfolio({
                       target="_blank"
                       rel="noreferrer"
                     >
-                      {p.link.label} ↗
-                    </a>
+                      {p.link.label}                    </a>
                   )}
                 </article>
               ))}
@@ -247,7 +299,7 @@ export default function Portfolio({
                   <p className="pf-tl__org">{x.org}</p>
                   <ul className="pf-tl__points">
                     {x.points.map((pt, i) => (
-                      <li key={i}>{pt}</li>
+                      <li key={i}>{linkify(pt)}</li>
                     ))}
                   </ul>
                 </div>
@@ -289,12 +341,11 @@ export default function Portfolio({
                 target="_blank"
                 rel="noreferrer"
               >
-                GitHub ↗
-              </a>
+                GitHub              </a>
             </div>
             <p className="pf-foot">
-              © {profile.name} · {profile.location} · crafted in the space between
-              stars
+              (c) {profile.name} | {profile.location} | crafted in the space
+              between stars
             </p>
           </footer>
         </div>

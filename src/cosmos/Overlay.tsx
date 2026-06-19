@@ -12,37 +12,37 @@ interface Caption {
 
 const CAPTIONS: Caption[] = [
   {
-    kicker: "≈ 12,742 km",
+    kicker: "~ 12,742 km",
     title: "Earth",
     body: "Home. A pale blue world, the only place we know that holds life.",
     range: [-0.02, 0.15],
   },
   {
-    kicker: "≈ 9 billion km",
+    kicker: "~ 9 billion km",
     title: "The Solar System",
     body: "Eight planets bound to an ordinary yellow star we call the Sun.",
     range: [0.16, 0.29],
   },
   {
-    kicker: "≈ 1,000 light-years",
+    kicker: "~ 1,000 light-years",
     title: "Into the Milky Way",
     body: "Drifting through clouds of gas and the glow of countless stars.",
     range: [0.3, 0.42],
   },
   {
-    kicker: "≈ 26,000 light-years",
+    kicker: "~ 26,000 light-years",
     title: "Sagittarius A*",
     body: "A supermassive black hole, 4 million Suns, anchoring the galaxy's heart.",
     range: [0.46, 0.58],
   },
   {
-    kicker: "≈ 100,000 light-years",
+    kicker: "~ 100,000 light-years",
     title: "The Milky Way",
     body: "A barred spiral of 100 to 400 billion stars. One of them is ours.",
     range: [0.63, 0.75],
   },
   {
-    kicker: "≈ 93 billion light-years",
+    kicker: "~ 93 billion light-years",
     title: "The Observable Universe",
     body: "Two trillion galaxies, and beyond them lies everything, and the unknown.",
     range: [0.87, 1.01],

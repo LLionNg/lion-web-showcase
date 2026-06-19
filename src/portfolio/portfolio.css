@@ -37,6 +37,14 @@
 }
 
 /* ---- ambient layers ---- */
+/* Background plane that tilts toward the pointer (--mx/--my set in JS). */
+.pf-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform: perspective(1200px) scale(1.12); /* rest; JS sets the tilt inline */
+  will-change: transform;
+}
 .pf-canvas {
   position: absolute;
   inset: 0;
@@ -246,7 +254,7 @@
 /* ---- stats ---- */
 .pf-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
   margin: 4vh 0 2vh;
 }
@@ -316,6 +324,7 @@
   inset: 0;
   padding: 1px;
   border-radius: inherit;
+  pointer-events: none; /* never intercept clicks on the card's links */
   background: linear-gradient(135deg, var(--pf-cyan), transparent 40%, transparent 60%, var(--pf-purple));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
@@ -371,6 +380,18 @@
   text-decoration: none;
 }
 .pf-card__link:hover { text-decoration: underline; }
+
+/* inline links inside body copy (e.g. a project URL in an experience bullet) */
+.pf-inline-link {
+  color: var(--pf-cyan);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(110, 168, 255, 0.45);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.pf-inline-link:hover {
+  color: var(--pf-ice);
+  border-color: var(--pf-ice);
+}
 
 /* ---- tags ---- */
 .pf-tags { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -431,7 +452,7 @@
   color: #b7c1e4;
 }
 .pf-tl__points li::before {
-  content: "▸";
+  content: ">";
   position: absolute;
   left: 0;
   color: var(--pf-purple);
@@ -489,7 +510,7 @@
 
 /* ---- responsive ---- */
 @media (max-width: 760px) {
-  .pf-stats { grid-template-columns: repeat(2, 1fr); }
+  .pf-stats { grid-template-columns: 1fr; }
   .pf-cards,
   .pf-cards--compact,
   .pf-skills { grid-template-columns: 1fr; }
