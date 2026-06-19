@@ -218,7 +218,11 @@ export default function Portfolio({
           <div className="pf-stats" data-reveal>
             {stats.map((s) => (
               <div className="pf-stat" key={s.label}>
-                <span className="pf-stat__value">{s.value}</span>
+                <span
+                  className={`pf-stat__value${s.tone ? ` pf-stat__value--${s.tone}` : ""}`}
+                >
+                  {s.value}
+                </span>
                 <span className="pf-stat__label">{s.label}</span>
                 {s.link && (
                   <a
@@ -340,7 +344,9 @@ export default function Portfolio({
 
           {/* ===== CONTACT ===== */}
           <footer className="pf-contact" data-reveal>
-            <h2 className="pf-contact__title">Let's build something impactful.</h2>
+            <h2 className="pf-contact__title">
+              Let's explore the unknown across a boundless sea of stars.
+            </h2>
             <div className="pf-cta">
               <a className="pf-btn pf-btn--primary" href={`mailto:${profile.email}`}>
                 {profile.email}

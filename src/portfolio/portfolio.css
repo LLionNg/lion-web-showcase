@@ -279,6 +279,37 @@
   background-clip: text;
   color: transparent;
 }
+/* metallic shine for the award stats */
+.pf-stat__value--silver,
+.pf-stat__value--gold {
+  background-size: 220% auto;
+  animation: pf-shine 3.5s linear infinite;
+}
+.pf-stat__value--silver {
+  background-image: linear-gradient(
+    100deg,
+    #b9bdc6 0%,
+    #ffffff 22%,
+    #8b909b 46%,
+    #ffffff 70%,
+    #b9bdc6 100%
+  );
+}
+.pf-stat__value--gold {
+  background-image: linear-gradient(
+    100deg,
+    #c8901a 0%,
+    #ffe98a 22%,
+    #b8800f 46%,
+    #fff3b0 70%,
+    #c8901a 100%
+  );
+}
+@keyframes pf-shine {
+  to {
+    background-position: -220% center;
+  }
+}
 .pf-stat__label {
   display: block;
   margin-top: 6px;
@@ -542,7 +573,9 @@
 @media (prefers-reduced-motion: reduce) {
   .pf-aurora,
   .pf-dot,
-  .pf-avatar::after { animation: none; }
+  .pf-avatar::after,
+  .pf-stat__value--silver,
+  .pf-stat__value--gold { animation: none; }
   [data-reveal] { transition: opacity 0.4s ease; transform: none; }
 }
 

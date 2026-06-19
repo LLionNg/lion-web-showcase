@@ -25,13 +25,15 @@ export const profile = {
 export type Stat = {
   value: string;
   label: string;
+  tone?: "silver" | "gold";
   link?: { href: string; label: string };
 };
 export const stats: Stat[] = [
-  { value: "Silver Medal", label: "Super AI Engineer SS4" },
+  { value: "Silver Medal", label: "Super AI Engineer SS4", tone: "silver" },
   {
     value: "1st Place",
     label: "Llama 3 Hackathon @Lablab.ai",
+    tone: "gold",
     link: {
       href: "https://lablab.ai/u/@tomu1572380/cm0fgsj3o004wxpstcmeod6h1",
       label: "Certificate",

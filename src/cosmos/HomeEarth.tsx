@@ -26,6 +26,9 @@ const START_ALT = 2.5;
 const MAX_ALT = 3.6; // zoom-out cap; scrolling out past this -> cosmos
 const DIVE_ALT = 0.3; // zoom-in floor; scrolling in past this -> portfolio
 const GLOBE_R = 100; // three-globe globe radius (for the controls distance clamp)
+// Longitude offset (deg) if globe.gl's texture UV origin needs a constant shift
+// to align the day/night terminator with the continents. Tuned by inspection.
+const LNG_OFFSET = 0;
 
 export type EarthPhase = "active" | "faded" | "warp" | "hidden";
 
@@ -81,20 +84,24 @@ export default function HomeEarth({
       .atmosphereColor("#6ea8ff")
       .atmosphereAltitude(0.2);
     globeRef.current = world;
+    if (import.meta.env.DEV)
+      (window as unknown as { __globe?: GlobeInstance }).__globe = world;
 
-    // ---- day/night material (blend day + night textures by sun angle) ----
+    // ---- day/night material ----
+    // The blend is computed in GEOGRAPHIC (UV) space — each fragment's lat/lng
+    // comes from the equirectangular UV, and we compare it to the sun's subsolar
+    // lat/lng — so the terminator always lines up with the texture's continents
+    // (a 3D-normal approach mismatched globe.gl's internal frame and inverted it).
     const loader = new THREE.TextureLoader();
     const material = new THREE.ShaderMaterial({
       uniforms: {
         dayTexture: { value: loader.load(DAY_TEX) },
         nightTexture: { value: loader.load(NIGHT_TEX) },
-        sunDirection: { value: new THREE.Vector3(1, 0, 0) },
+        sunLatLng: { value: new THREE.Vector2(0, 0) },
       },
       vertexShader: `
-        varying vec3 vNormal;
         varying vec2 vUv;
         void main() {
-          vNormal = normalize(normal);
           vUv = uv;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
@@ -102,12 +109,16 @@ export default function HomeEarth({
       fragmentShader: `
         uniform sampler2D dayTexture;
         uniform sampler2D nightTexture;
-        uniform vec3 sunDirection;
-        varying vec3 vNormal;
+        uniform vec2 sunLatLng;
         varying vec2 vUv;
+        #define DEG 0.0174532925
         void main() {
-          float intensity = dot(normalize(vNormal), normalize(sunDirection));
-          float blend = smoothstep(-0.12, 0.25, intensity);
+          float lng = (vUv.x * 360.0 - 180.0) * DEG;
+          float lat = (90.0 - vUv.y * 180.0) * DEG;
+          float sLat = sunLatLng.x * DEG;
+          float sLng = sunLatLng.y * DEG;
+          float cosAng = sin(lat) * sin(sLat) + cos(lat) * cos(sLat) * cos(lng - sLng);
+          float blend = smoothstep(-0.12, 0.25, cosAng);
           vec3 day = texture2D(dayTexture, vUv).rgb;
           vec3 night = texture2D(nightTexture, vUv).rgb;
           gl_FragColor = vec4(mix(night, day, blend), 1.0);
@@ -116,12 +127,10 @@ export default function HomeEarth({
     });
     world.globeMaterial(material);
 
-    // sun moves slowly; recompute the direction in the globe's local frame
-    const sunVec = material.uniforms.sunDirection.value as THREE.Vector3;
+    // sun moves with real (UTC) time -> recompute its subsolar lat/lng.
     const updateSun = () => {
       const s = subsolar(new Date());
-      const c = world.getCoords(s.lat, s.lng, 0);
-      sunVec.set(c.x, c.y, c.z).normalize();
+      material.uniforms.sunLatLng.value.set(s.lat, s.lng + LNG_OFFSET);
     };
     updateSun();
     const sunTimer = window.setInterval(updateSun, 60_000);
