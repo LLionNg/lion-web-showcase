@@ -119,9 +119,28 @@ export default function Portfolio({
     };
     wrapper.addEventListener("wheel", onWheel, { passive: true });
 
+    // Cosmos scroll effect: fade/slide/blur each block by its distance from the
+    // viewport centre — content above and below is hidden and slides in as it
+    // nears the middle, the blur clearing as it warps into focus.
+    const reveals = Array.from(
+      wrapper.querySelectorAll<HTMLElement>("[data-reveal]"),
+    );
+    const updateReveals = () => {
+      const vh = window.innerHeight;
+      for (const el of reveals) {
+        const r = el.getBoundingClientRect();
+        const d = (r.top + r.height / 2 - vh / 2) / vh;
+        const fade = Math.min(1, Math.max(0, (Math.abs(d) - 0.3) / 0.22));
+        el.style.opacity = (1 - fade).toFixed(3);
+        el.style.transform = `translate3d(0, ${(d * 46).toFixed(1)}px, 0) scale(${(1 - fade * 0.06).toFixed(3)})`;
+        el.style.filter = fade > 0.02 ? `blur(${(fade * 7).toFixed(1)}px)` : "";
+      }
+    };
+
     let raf = 0;
     const loop = (t: number) => {
       lenis.raf(t);
+      updateReveals();
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -130,27 +149,6 @@ export default function Portfolio({
       wrapper.removeEventListener("wheel", onWheel);
       lenis.destroy();
     };
-  }, [active]);
-
-  // Reveal sections as they scroll into view.
-  useEffect(() => {
-    if (!active) return;
-    const root = scrollRef.current;
-    const els = root?.querySelectorAll<HTMLElement>("[data-reveal]");
-    if (!els?.length) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            e.target.classList.add("in");
-            io.unobserve(e.target);
-          }
-        }
-      },
-      { root, threshold: 0.12 },
-    );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
   }, [active]);
 
   const featured = projects.filter((p) => p.featured);
@@ -175,43 +173,35 @@ export default function Portfolio({
         <div className="pf-inner">
           {/* ===== HERO ===== */}
           <header className="pf-hero">
-            <p className="pf-kicker">
-              <span className="pf-dot" /> arrived | {profile.handle.toLowerCase()}.exe
-            </p>
-            <div className="pf-hero__main">
-              <div className="pf-avatar">
-                <img
-                  src={profile.avatar}
-                  alt={profile.name}
-                  onError={(e) => (e.currentTarget.style.display = "none")}
-                />
-                <span className="pf-avatar__fallback">SN</span>
+            <div className="pf-hero__text">
+              <p className="pf-kicker">
+                <span className="pf-dot" /> arrived | {profile.handle.toLowerCase()}.exe
+              </p>
+              <h1 className="pf-name">{profile.name}</h1>
+              <p className="pf-role">{profile.title}</p>
+              <p className="pf-tagline">{profile.tagline}</p>
+              <div className="pf-cta">
+                <a className="pf-btn pf-btn--primary" href="#work">
+                  View Work
+                </a>
+                <a
+                  className="pf-btn"
+                  href={profile.github}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  GitHub
+                </a>
+                <a className="pf-btn" href={`mailto:${profile.email}`}>
+                  Email
+                </a>
               </div>
-              <div>
-                <h1 className="pf-name">{profile.name}</h1>
-                <p className="pf-role">{profile.title}</p>
-              </div>
+              <p className="pf-loc">
+                {profile.location} | {profile.education.school} |{" "}
+                {profile.education.degree}
+              </p>
             </div>
-            <p className="pf-tagline">{profile.tagline}</p>
-            <div className="pf-cta">
-              <a className="pf-btn pf-btn--primary" href="#work">
-                View Work
-              </a>
-              <a
-                className="pf-btn"
-                href={profile.github}
-                target="_blank"
-                rel="noreferrer"
-              >
-                GitHub              </a>
-              <a className="pf-btn" href={`mailto:${profile.email}`}>
-                Email
-              </a>
-            </div>
-            <p className="pf-loc">
-              {profile.location} | {profile.education.school} |{" "}
-              {profile.education.degree}
-            </p>
+            <img className="pf-portrait" src={profile.avatar} alt={profile.name} />
           </header>
 
           {/* ===== STATS ===== */}
@@ -342,8 +332,8 @@ export default function Portfolio({
             </div>
           </section>
 
-          {/* ===== CONTACT ===== */}
-          <footer className="pf-contact" data-reveal>
+          {/* ===== CONTACT ===== (the landing anchor — not faded by the scroll effect) */}
+          <footer className="pf-contact">
             <h2 className="pf-contact__title">
               Let's explore the unknown across a boundless sea of stars.
             </h2>

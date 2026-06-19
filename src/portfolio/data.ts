@@ -18,8 +18,8 @@ export const profile = {
     gpa: "3.25 / 4.00",
     year: "2025",
   },
-  // profile portrait - drop your image here (see public/portfolio/README)
-  avatar: "/portfolio/profile.jpg",
+  // profile portrait, integrated into the hero
+  avatar: "/portfolio/main.jpg",
 };
 
 export type Stat = {
@@ -173,7 +173,7 @@ export const experience: Experience[] = [
 export const skills: { group: string; items: string[] }[] = [
   {
     group: "AI / ML",
-    items: ["PyTorch", "TensorFlow", "TensorRT", "CUDA", "Hugging Face", "OpenCV", "NumPy", "Pandas", "verl", "RAG", "LLMs", "YOLO"],
+    items: ["PyTorch", "TensorFlow", "Keras", "TensorRT", "ONNX", "CUDA", "Hugging Face", "ModelScope", "Ultralytics", "OpenCV", "vLLM", "veRL", "NumPy", "Pandas"],
   },
   {
     group: "Languages",
@@ -185,6 +185,6 @@ export const skills: { group: string; items: string[] }[] = [
   },
   {
     group: "Platform / Ops",
-    items: ["Docker", "ArgoCD", "Jenkins", "Git", "AWS", "GCP", "PostgreSQL", "MongoDB", "ELK", "Grafana", "Heroku", "Gradle", "Maven"],
+    items: ["Docker", "ArgoCD", "Jenkins", "Git", "AWS", "GCP", "PostgreSQL", "PGVector", "MongoDB", "ELK", "Grafana", "Heroku", "Gradle", "Maven"],
   },
 ];
