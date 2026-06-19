@@ -6,7 +6,6 @@ import Stage from "./Stage";
 import { scrollState } from "./progress";
 import { prefersReducedMotion } from "./util";
 import { DBG } from "./debug";
-import Earth from "./stages/Earth";
 import SolarSystem from "./stages/SolarSystem";
 import MilkyWay from "./stages/MilkyWay";
 import BlackHole from "./stages/BlackHole";
@@ -52,17 +51,10 @@ export default function Experience() {
       {/* Persistent deep-space backdrop so transitions never go fully black. */}
       <Stars radius={120} depth={60} count={4000} factor={4} fade speed={0.4} />
 
-      <Stage
-        start={0.0}
-        end={0.16}
-        fadeIn={false}
-        bigScale={1.05}
-        smallScale={0.12}
-        z={0}
-      >
-        <Earth />
-      </Stage>
-
+      {/* The opening Earth is now the interactive Cesium globe (HomeEarth),
+          which hands off to the cosmos here — so the cosmos begins at the
+          Solar System. (No R3F Earth stage; that's why zoom-out no longer shows
+          the old blue marble.) */}
       <Stage start={0.14} end={0.32} z={-0.6} bigScale={1.5} smallScale={0.1}>
         <SolarSystem start={0.14} end={0.32} />
       </Stage>
