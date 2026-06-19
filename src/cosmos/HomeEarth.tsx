@@ -5,8 +5,9 @@ import * as Cesium from "cesium";
  * Homepage opening "Earth": the interactive Cesium globe (drag to orbit, scroll
  * to dive into a city — satellite + Google Photorealistic 3D buildings). Zoom is
  * capped at the full globe; scrolling OUT past that hands off to the R3F cosmic
- * zoom (solar system → universe) via `onZoomOutToCosmos`. `active` drives the
- * crossfade: when handed off it fades out, stops rendering and ignores input.
+ * zoom (solar system → universe) via `onZoomOutToCosmos`. And at the BOTTOM —
+ * once you're at street level and keep zooming in — it dives THROUGH into the
+ * portfolio via `onZoomIntoPortfolio`. `phase` drives visibility + render loop.
  */
 
 const ION_TOKEN = import.meta.env.VITE_CESIUM_ION_TOKEN as string;
@@ -16,18 +17,33 @@ const MAX_HEIGHT = 28_000_000; // zoom-out cap: full globe framed (m)
 // Scroll out past this altitude → hand off to the cosmos. Kept well below the
 // cap so the hand-off reliably fires (you can't get "stuck" at the globe).
 const HANDOFF_HEIGHT = 20_000_000;
+// "Zoom until you can't": once you're within DIVE_NEAR metres of the surface
+// (close to any city, whatever its elevation) and a zoom-in tick no longer
+// moves the camera more than DIVE_STUCK metres — i.e. it's pinned at the
+// minimum zoom (street level) — dive through into the portfolio. Tunable.
+const DIVE_NEAR = 8_000;
+const DIVE_STUCK = 2;
+
+export type EarthPhase = "active" | "faded" | "warp" | "hidden";
 
 export default function HomeEarth({
-  active,
+  phase,
   onZoomOutToCosmos,
+  onZoomIntoPortfolio,
+  homeSignal,
 }: {
-  active: boolean;
+  phase: EarthPhase;
   onZoomOutToCosmos: () => void;
+  onZoomIntoPortfolio: () => void;
+  homeSignal: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const handoffRef = useRef(onZoomOutToCosmos);
   handoffRef.current = onZoomOutToCosmos;
+  const diveRef = useRef(onZoomIntoPortfolio);
+  diveRef.current = onZoomIntoPortfolio;
+  const divedRef = useRef(false);
 
   // create the viewer once
   useEffect(() => {
@@ -125,11 +141,26 @@ export default function HomeEarth({
       destination: Cesium.Cartesian3.fromDegrees(-40, 12, MAX_HEIGHT * 0.78),
     });
 
-    // scroll OUT at the full globe → hand off to the cosmos
+    // Wheel at the two extremes hands off to the neighbouring "world":
+    //  · zoom OUT at the full globe → the cosmos (solar system → universe)
+    //  · zoom IN at street level    → dive through into the portfolio
+    let lastH = Infinity;
     const onWheel = (e: WheelEvent) => {
-      if (e.deltaY <= 0) return; // only zoom-out
-      const h = viewer.camera.positionCartographic?.height ?? 0;
-      if (h >= HANDOFF_HEIGHT) handoffRef.current();
+      const carto = viewer.camera.positionCartographic;
+      if (!carto) return;
+      const h = carto.height;
+      if (e.deltaY > 0) {
+        // zoom OUT at the full globe → cosmos
+        if (h >= HANDOFF_HEIGHT) handoffRef.current();
+      } else if (e.deltaY < 0 && !divedRef.current && h < DIVE_NEAR) {
+        // zoom IN but the camera no longer drops → pinned at the min zoom
+        // (street level) → dive through into the portfolio.
+        if (Math.abs(h - lastH) < DIVE_STUCK) {
+          divedRef.current = true;
+          diveRef.current();
+        }
+      }
+      lastH = h;
     };
     scene.canvas.addEventListener("wheel", onWheel, { passive: true });
 
@@ -141,16 +172,33 @@ export default function HomeEarth({
     };
   }, []);
 
-  // active → visibility, interactivity, and whether Cesium keeps rendering
+  // phase → render loop + re-arm the dive (visibility itself is CSS-driven)
   useEffect(() => {
     const v = viewerRef.current;
-    const el = ref.current;
-    if (!v || !el) return;
-    el.style.opacity = active ? "1" : "0";
-    el.style.pointerEvents = active ? "auto" : "none";
-    v.useDefaultRenderLoop = active; // stop the GPU work once in the cosmos
-    if (active) v.resize();
-  }, [active]);
+    if (!v) return;
+    const live = phase === "active";
+    v.useDefaultRenderLoop = live; // stop GPU work when not the active layer
+    if (live) {
+      v.resize();
+      divedRef.current = false; // re-arm the dive after returning from portfolio
+    }
+  }, [phase]);
 
-  return <div ref={ref} className="home-earth" aria-hidden={!active} />;
+  // returning from the portfolio → fly the camera back out to the globe
+  useEffect(() => {
+    const v = viewerRef.current;
+    if (!v || !homeSignal) return;
+    v.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(-40, 12, MAX_HEIGHT * 0.78),
+      duration: 2.2,
+    });
+  }, [homeSignal]);
+
+  return (
+    <div
+      ref={ref}
+      className={`home-earth home-earth--${phase}`}
+      aria-hidden={phase !== "active"}
+    />
+  );
 }

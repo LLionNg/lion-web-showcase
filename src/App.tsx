@@ -7,14 +7,17 @@ import Experience from "./cosmos/Experience";
 import Overlay from "./cosmos/Overlay";
 import { DBG } from "./cosmos/debug";
 import { scrollState } from "./cosmos/progress";
+import type { EarthPhase } from "./cosmos/HomeEarth";
 
-// Cesium is heavy — code-split it so the rest of the app stays lean.
+// Heavy worlds are code-split so the initial load stays lean.
 const HomeEarth = lazy(() => import("./cosmos/HomeEarth"));
+const Portfolio = lazy(() => import("./portfolio/Portfolio"));
 
-// Where the Earth hands off to the cosmic zoom: the cosmos scroll jumps to the
-// Solar System on hand-off, and scrolling back up past it returns to the Earth.
+// Earth ⟷ cosmos hand-off (zoom out past the globe → solar system).
 const HANDOFF_OFFSET = 0.22;
 const HANDBACK_BELOW = 0.18;
+// Length of the "dive" warp into the portfolio — must match the CSS animation.
+const DIVE_MS = 1150;
 
 const scrollEl = () =>
   [...document.querySelectorAll("div")].find(
@@ -22,25 +25,55 @@ const scrollEl = () =>
   );
 
 export default function App() {
-  // true = interactive Cesium Earth on top; false = R3F cosmic zoom.
+  // earthActive: interactive Cesium earth (true) vs R3F cosmic zoom (false).
   const [earthActive, setEarthActive] = useState(true);
+  // the portfolio "world" you dive into at the bottom of the zoom.
+  const [inPortfolio, setInPortfolio] = useState(DBG.portfolio);
+  const [diving, setDiving] = useState(false);
+  // bumped on return-to-orbit so the globe flies back out.
+  const [homeSignal, setHomeSignal] = useState(0);
 
-  // Earth → cosmos: zoom-out past the full globe drops you into the solar system.
+  // Earth → cosmos: zoom-out past the full globe drops into the solar system.
   const toCosmos = useCallback(() => {
     const sc = scrollEl();
     if (sc) sc.scrollTop = (sc.scrollHeight - sc.clientHeight) * HANDOFF_OFFSET;
     setEarthActive(false);
   }, []);
 
+  // Earth → portfolio: at street level, dive through (warp flash, then reveal).
+  const diveToPortfolio = useCallback(() => {
+    setDiving(true);
+    window.setTimeout(() => {
+      setInPortfolio(true);
+      setDiving(false);
+    }, DIVE_MS);
+  }, []);
+
+  // Portfolio → Earth: fly back out to the globe.
+  const returnToOrbit = useCallback(() => {
+    setInPortfolio(false);
+    setEarthActive(true);
+    setHomeSignal((s) => s + 1);
+  }, []);
+
   // Cosmos → Earth: scrolling back up to the solar system returns to the globe.
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
-      if (earthActive) return;
-      if (e.deltaY < 0 && scrollState.offset <= HANDBACK_BELOW) setEarthActive(true);
+      if (earthActive || inPortfolio || diving) return;
+      if (e.deltaY < 0 && scrollState.offset <= HANDBACK_BELOW)
+        setEarthActive(true);
     };
     window.addEventListener("wheel", onWheel, { passive: true });
     return () => window.removeEventListener("wheel", onWheel);
-  }, [earthActive]);
+  }, [earthActive, inPortfolio, diving]);
+
+  const earthPhase: EarthPhase = inPortfolio
+    ? "hidden"
+    : diving
+      ? "warp"
+      : earthActive
+        ? "active"
+        : "faded";
 
   return (
     <div className="app">
@@ -76,7 +109,18 @@ export default function App() {
       </Canvas>
 
       <Suspense fallback={null}>
-        <HomeEarth active={earthActive} onZoomOutToCosmos={toCosmos} />
+        <HomeEarth
+          phase={earthPhase}
+          onZoomOutToCosmos={toCosmos}
+          onZoomIntoPortfolio={diveToPortfolio}
+          homeSignal={homeSignal}
+        />
+      </Suspense>
+
+      {diving && <div className="warp-flash on" aria-hidden="true" />}
+
+      <Suspense fallback={null}>
+        <Portfolio active={inPortfolio} onReturn={returnToOrbit} />
       </Suspense>
 
       <Overlay />
