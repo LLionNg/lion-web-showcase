@@ -250,3 +250,31 @@ body {
   width: 100% !important;
   height: 100% !important;
 }
+
+/* "Enter Portfolio" shortcut on the Earth view — skips the zoom (and the Cesium
+   ion tile quota it would burn) and warps straight into the portfolio. */
+.enter-portfolio {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 12; /* above the caption overlay (10), below the portfolio (20) */
+  padding: 11px 20px;
+  font: 600 0.8rem/1 "Inter", system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg);
+  background: rgba(110, 168, 255, 0.12);
+  border: 1px solid rgba(110, 168, 255, 0.4);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.enter-portfolio:hover {
+  background: rgba(110, 168, 255, 0.22);
+  box-shadow: 0 0 26px rgba(110, 168, 255, 0.4);
+  transform: translateY(-1px);
+}

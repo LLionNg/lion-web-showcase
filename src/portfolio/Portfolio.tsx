@@ -210,7 +210,7 @@ export default function Portfolio({
             </div>
             <p className="pf-loc">
               {profile.location} | {profile.education.school} |{" "}
-              {profile.education.degree} ({profile.education.gpa})
+              {profile.education.degree}
             </p>
           </header>
 
@@ -220,6 +220,16 @@ export default function Portfolio({
               <div className="pf-stat" key={s.label}>
                 <span className="pf-stat__value">{s.value}</span>
                 <span className="pf-stat__label">{s.label}</span>
+                {s.link && (
+                  <a
+                    className="pf-stat__link"
+                    href={s.link.href}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {s.link.label}
+                  </a>
+                )}
               </div>
             ))}
           </div>

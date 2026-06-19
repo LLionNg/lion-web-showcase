@@ -6,7 +6,7 @@ export const profile = {
   handle: "LLionNg",
   title: "AI Engineer & Software Developer",
   tagline:
-    "I build impactful AI systems - from deep-learning research to scalable, full-stack deployment.",
+    "I build impactful AI systems, from deep-learning research to scalable, full-stack deployment.",
   location: "Chiang Mai, Thailand",
   email: "lionng@devlionng.com",
   phone: "+66 (0)87 181 9369",
@@ -22,10 +22,21 @@ export const profile = {
   avatar: "/portfolio/profile.jpg",
 };
 
-export type Stat = { value: string; label: string };
+export type Stat = {
+  value: string;
+  label: string;
+  link?: { href: string; label: string };
+};
 export const stats: Stat[] = [
   { value: "Silver Medal", label: "Super AI Engineer SS4" },
-  { value: "1st Place", label: "Llama 3 Hackathon @ Meta AI" },
+  {
+    value: "1st Place",
+    label: "Llama 3 Hackathon @Lablab.ai",
+    link: {
+      href: "https://lablab.ai/u/@tomu1572380/cm0fgsj3o004wxpstcmeod6h1",
+      label: "Certificate",
+    },
+  },
   { value: "30+", label: "Projects" },
 ];
 
@@ -79,6 +90,10 @@ export const projects: Project[] = [
     tags: ["Llama 3", "RAG", "PDF", "EdTech"],
     year: "2024",
     badge: "1st Place - Llama 3 Hackathon",
+    link: {
+      label: "Certificate",
+      href: "https://lablab.ai/u/@tomu1572380/cm0fgsj3o004wxpstcmeod6h1",
+    },
     featured: true,
   },
   {

@@ -117,6 +117,18 @@ export default function App() {
         />
       </Suspense>
 
+      {/* Shortcut into the portfolio without zooming the globe (saves Cesium ion
+          quota). Reuses the same warp transition as the deep-zoom dive. */}
+      {earthPhase === "active" && (
+        <button
+          className="enter-portfolio"
+          onClick={diveToPortfolio}
+          title="Skip the zoom and go straight to the portfolio"
+        >
+          Enter Portfolio
+        </button>
+      )}
+
       {diving && <div className="warp-flash on" aria-hidden="true" />}
 
       <Suspense fallback={null}>

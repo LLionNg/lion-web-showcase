@@ -265,6 +265,10 @@
   border: 1px solid var(--pf-line);
   backdrop-filter: blur(12px);
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 .pf-stat__value {
   display: block;
@@ -281,6 +285,25 @@
   font-size: 0.74rem;
   letter-spacing: 0.06em;
   color: var(--pf-muted);
+}
+.pf-stat__link {
+  margin-top: 12px;
+  padding: 5px 14px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--pf-ice);
+  text-decoration: none;
+  border: 1px solid rgba(103, 232, 249, 0.35);
+  border-radius: 999px;
+  background: rgba(103, 232, 249, 0.08);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+.pf-stat__link:hover {
+  background: rgba(103, 232, 249, 0.18);
+  border-color: var(--pf-ice);
 }
 
 /* ---- sections + headings ---- */
