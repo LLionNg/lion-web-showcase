@@ -4,6 +4,10 @@ dist-ssr
 .vercel
 *.local
 .DS_Store
+
+# Claude Code local config — never commit
+.claude/
+
 .env
 .env.*
 !.env.example

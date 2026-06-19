@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { ScrollControls } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
@@ -6,17 +6,47 @@ import * as THREE from "three";
 import Experience from "./cosmos/Experience";
 import Overlay from "./cosmos/Overlay";
 import { DBG } from "./cosmos/debug";
+import { scrollState } from "./cosmos/progress";
+
+// Cesium is heavy — code-split it so the rest of the app stays lean.
+const HomeEarth = lazy(() => import("./cosmos/HomeEarth"));
+
+// Where the Earth hands off to the cosmic zoom: the cosmos scroll jumps to the
+// Solar System on hand-off, and scrolling back up past it returns to the Earth.
+const HANDOFF_OFFSET = 0.22;
+const HANDBACK_BELOW = 0.18;
+
+const scrollEl = () =>
+  [...document.querySelectorAll("div")].find(
+    (e) => e.scrollHeight > e.clientHeight + 5,
+  );
 
 export default function App() {
+  // true = interactive Cesium Earth on top; false = R3F cosmic zoom.
+  const [earthActive, setEarthActive] = useState(true);
+
+  // Earth → cosmos: zoom-out past the full globe drops you into the solar system.
+  const toCosmos = useCallback(() => {
+    const sc = scrollEl();
+    if (sc) sc.scrollTop = (sc.scrollHeight - sc.clientHeight) * HANDOFF_OFFSET;
+    setEarthActive(false);
+  }, []);
+
+  // Cosmos → Earth: scrolling back up to the solar system returns to the globe.
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      if (earthActive) return;
+      if (e.deltaY < 0 && scrollState.offset <= HANDBACK_BELOW) setEarthActive(true);
+    };
+    window.addEventListener("wheel", onWheel, { passive: true });
+    return () => window.removeEventListener("wheel", onWheel);
+  }, [earthActive]);
+
   return (
     <div className="app">
       <Canvas
         className="canvas"
-        // Render continuously (don't fall back to on-demand, which leaves the
-        // scene blank until a mouse move and looks like stutter).
         frameloop="always"
-        // Tight near/far ratio keeps depth-buffer precision high so close
-        // surfaces (e.g. Earth + its cloud shell) never z-fight / shimmer.
         camera={{ position: [0, 0, 6], fov: 50, near: 0.3, far: 150 }}
         dpr={[1, 2]}
         gl={{
@@ -27,7 +57,6 @@ export default function App() {
       >
         <color attach="background" args={["#05060a"]} />
         <Suspense fallback={null}>
-          {/* 7 pages of scroll length, damped for a buttery smooth feel. */}
           <ScrollControls pages={7} damping={0.3}>
             <Experience />
           </ScrollControls>
@@ -45,6 +74,10 @@ export default function App() {
           </EffectComposer>
         )}
       </Canvas>
+
+      <Suspense fallback={null}>
+        <HomeEarth active={earthActive} onZoomOutToCosmos={toCosmos} />
+      </Suspense>
 
       <Overlay />
     </div>
