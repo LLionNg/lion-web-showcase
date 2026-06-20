@@ -189,7 +189,8 @@
 .pf-name {
   font-size: clamp(2.6rem, 7vw, 5rem);
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.14; /* room for the p/g descenders (clipped at 1 with bg-clip) */
+  padding-bottom: 0.06em;
   letter-spacing: -0.03em;
   background: linear-gradient(120deg, #fff 20%, var(--pf-cyan) 60%, var(--pf-purple));
   -webkit-background-clip: text;
@@ -550,19 +551,23 @@
 }
 
 /* ---- responsive ---- */
-@media (max-width: 760px) {
-  .pf-stats { grid-template-columns: 1fr; }
-  .pf-cards,
-  .pf-cards--compact,
-  .pf-skills { grid-template-columns: 1fr; }
+/* stack the hero portrait below the text on tablets + small screens */
+@media (max-width: 960px) {
   .pf-hero__text { max-width: 100%; }
   .pf-portrait {
     position: static;
     transform: none;
     align-self: center;
-    width: min(64%, 260px);
-    margin: 4px 0 8px;
+    width: min(58%, 300px);
+    margin: 8px 0;
   }
+}
+@media (max-width: 760px) {
+  .pf-stats { grid-template-columns: 1fr; }
+  .pf-cards,
+  .pf-cards--compact,
+  .pf-skills { grid-template-columns: 1fr; }
+  .pf-portrait { width: min(66%, 260px); }
   .pf-contact__title { white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -32,6 +32,8 @@ export default function App() {
   const [diving, setDiving] = useState(false);
   // bumped on return-to-orbit so the globe flies back out.
   const [homeSignal, setHomeSignal] = useState(0);
+  // where the portfolio lands: top (Enter button) vs bottom (deep-zoom dive).
+  const [portfolioTop, setPortfolioTop] = useState(false);
 
   // Earth → cosmos: zoom-out past the full globe drops into the solar system.
   const toCosmos = useCallback(() => {
@@ -40,8 +42,10 @@ export default function App() {
     setEarthActive(false);
   }, []);
 
-  // Earth → portfolio: at street level, dive through (warp flash, then reveal).
-  const diveToPortfolio = useCallback(() => {
+  // Earth → portfolio: warp flash, then reveal. The deep-zoom dive lands at the
+  // bottom (toolbox); the Enter Portfolio button lands at the top (hero).
+  const diveToPortfolio = useCallback((landAtTop = false) => {
+    setPortfolioTop(landAtTop);
     setDiving(true);
     window.setTimeout(() => {
       setInPortfolio(true);
@@ -122,8 +126,8 @@ export default function App() {
       {earthPhase === "active" && (
         <button
           className="enter-portfolio"
-          onClick={diveToPortfolio}
-          title="Skip the zoom and go straight to the portfolio"
+          onClick={() => diveToPortfolio(true)}
+          title="Go straight to the top of the portfolio"
         >
           Enter Portfolio
         </button>
@@ -132,7 +136,11 @@ export default function App() {
       {diving && <div className="warp-flash on" aria-hidden="true" />}
 
       <Suspense fallback={null}>
-        <Portfolio active={inPortfolio} onReturn={returnToOrbit} />
+        <Portfolio
+          active={inPortfolio}
+          landTop={portfolioTop}
+          onReturn={returnToOrbit}
+        />
       </Suspense>
 
       <Overlay />

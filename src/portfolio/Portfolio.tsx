@@ -33,9 +33,11 @@ function linkify(text: string) {
  */
 export default function Portfolio({
   active,
+  landTop,
   onReturn,
 }: {
   active: boolean;
+  landTop: boolean;
   onReturn: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -88,10 +90,13 @@ export default function Portfolio({
       wheelMultiplier: 0.9,
     });
 
-    // land at the bottom once layout has settled
+    // land at the bottom (deep-zoom dive) or the top (Enter Portfolio button)
     requestAnimationFrame(() => {
       lenis.resize();
-      lenis.scrollTo(lenis.limit, { immediate: true, force: true });
+      lenis.scrollTo(landTop ? 0 : lenis.limit, {
+        immediate: true,
+        force: true,
+      });
     });
 
     // "Scroll out → Earth": keep pushing OUT once pinned at the bottom and we
@@ -149,7 +154,7 @@ export default function Portfolio({
       wrapper.removeEventListener("wheel", onWheel);
       lenis.destroy();
     };
-  }, [active]);
+  }, [active, landTop]);
 
   const featured = projects.filter((p) => p.featured);
   const more = projects.filter((p) => !p.featured);
