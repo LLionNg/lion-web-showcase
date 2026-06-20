@@ -91,11 +91,18 @@ export default function Portfolio({
     });
 
     // land at the bottom (deep-zoom dive) or the top (Enter Portfolio button)
+    let landed = false;
     requestAnimationFrame(() => {
       lenis.resize();
       lenis.scrollTo(landTop ? 0 : lenis.limit, {
         immediate: true,
         force: true,
+      });
+      // Only AFTER the landing jump can a scroll arm the exit, so neither the
+      // jump itself nor Lenis's init scroll (fired at the top) can pre-arm it
+      // and bounce a fresh bottom-landing straight back out.
+      requestAnimationFrame(() => {
+        landed = true;
       });
     });
 
@@ -106,23 +113,46 @@ export default function Portfolio({
     let canExit = false;
     let overscroll = 0;
     let exited = false;
-    lenis.on("scroll", () => {
-      if (lenis.scroll < lenis.limit - 120) canExit = true;
-    });
-    const onWheel = (e: WheelEvent) => {
+    const nearBottom = () =>
+      wrapper.scrollTop >= wrapper.scrollHeight - wrapper.clientHeight - 4;
+    // Arm the exit only once you've moved up into the content. Uses the native
+    // scroll position so it works for both wheel-driven Lenis and touch.
+    const armExit = () => {
+      if (!landed) return;
+      if (wrapper.scrollTop < wrapper.scrollHeight - wrapper.clientHeight - 120)
+        canExit = true;
+    };
+    lenis.on("scroll", armExit);
+    wrapper.addEventListener("scroll", armExit, { passive: true });
+    // `dir > 0` = pushing OUT at the bottom (wheel-down, or a finger swiping UP).
+    const pushOut = (dir: number, amount: number, threshold: number) => {
       if (exited) return;
-      const atBottom = lenis.scroll >= lenis.limit - 4;
-      if (e.deltaY > 0 && canExit && atBottom) {
-        overscroll += e.deltaY;
-        if (overscroll > 220) {
+      if (dir > 0 && canExit && nearBottom()) {
+        overscroll += amount;
+        if (overscroll > threshold) {
           exited = true;
           onReturnRef.current();
         }
-      } else if (e.deltaY < 0 || !atBottom) {
+      } else if (dir < 0 || !nearBottom()) {
         overscroll = 0; // moving up / away cancels the exit intent
       }
     };
+    const onWheel = (e: WheelEvent) =>
+      pushOut(e.deltaY, Math.abs(e.deltaY), 220);
     wrapper.addEventListener("wheel", onWheel, { passive: true });
+    // Touch equivalent (no wheel on mobile): a sustained swipe UP at the bottom.
+    let prevTouchY = 0;
+    const onTouchStart = (e: TouchEvent) => {
+      prevTouchY = e.touches[0]?.clientY ?? 0;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const y = e.touches[0]?.clientY ?? 0;
+      const delta = prevTouchY - y; // finger up (push out) -> positive
+      prevTouchY = y;
+      pushOut(delta, Math.abs(delta), 100);
+    };
+    wrapper.addEventListener("touchstart", onTouchStart, { passive: true });
+    wrapper.addEventListener("touchmove", onTouchMove, { passive: true });
 
     // Cosmos scroll effect: fade/slide/blur each block by its distance from the
     // viewport centre — content above and below is hidden and slides in as it
@@ -152,6 +182,9 @@ export default function Portfolio({
     return () => {
       cancelAnimationFrame(raf);
       wrapper.removeEventListener("wheel", onWheel);
+      wrapper.removeEventListener("scroll", armExit);
+      wrapper.removeEventListener("touchstart", onTouchStart);
+      wrapper.removeEventListener("touchmove", onTouchMove);
       lenis.destroy();
     };
   }, [active, landTop]);
@@ -163,6 +196,7 @@ export default function Portfolio({
     <section
       className={`portfolio ${active ? "portfolio--on" : ""}`}
       aria-hidden={!active}
+      inert={!active}
     >
       <div className="pf-bg" aria-hidden="true">
         <ParticleField active={active} />

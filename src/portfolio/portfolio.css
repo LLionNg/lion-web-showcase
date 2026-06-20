@@ -24,16 +24,23 @@
   visibility: hidden;
   pointer-events: none;
   transform: scale(1.08);
+  /* EXIT: fast + light so dismissing the overlay doesn't fight the globe
+     fly-back (the slow scale/opacity fade-out was the main source of stutter). */
   transition:
-    opacity 0.9s ease,
-    transform 1.15s cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0.9s;
+    opacity 0.5s ease,
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.5s;
 }
 .portfolio--on {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   transform: scale(1);
+  /* ENTER: slower + graceful (the dive in). */
+  transition:
+    opacity 0.9s ease,
+    transform 1.15s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.9s;
 }
 
 /* ---- ambient layers ---- */

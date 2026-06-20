@@ -68,7 +68,24 @@ export default function App() {
         setEarthActive(true);
     };
     window.addEventListener("wheel", onWheel, { passive: true });
-    return () => window.removeEventListener("wheel", onWheel);
+    // Touch equivalent (no wheel on mobile): a swipe DOWN at the top of the
+    // cosmos flies back to the globe.
+    let ty = 0;
+    const onTouchStart = (e: TouchEvent) => {
+      ty = e.touches[0]?.clientY ?? 0;
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (earthActive || inPortfolio || diving) return;
+      const dy = (e.changedTouches[0]?.clientY ?? 0) - ty;
+      if (dy > 48 && scrollState.offset <= HANDBACK_BELOW) setEarthActive(true);
+    };
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
+    };
   }, [earthActive, inPortfolio, diving]);
 
   const earthPhase: EarthPhase = inPortfolio

@@ -120,7 +120,9 @@ export default function HomeEarth({
           float cosAng = sin(lat) * sin(sLat) + cos(lat) * cos(sLat) * cos(lng - sLng);
           float blend = smoothstep(-0.12, 0.25, cosAng);
           vec3 day = texture2D(dayTexture, vUv).rgb;
-          vec3 night = texture2D(nightTexture, vUv).rgb;
+          // dim earth under the city lights so the night side is never pure
+          // black (the globe always reads as a sphere, even over night oceans)
+          vec3 night = texture2D(nightTexture, vUv).rgb + day * 0.10;
           gl_FragColor = vec4(mix(night, day, blend), 1.0);
         }
       `,
@@ -213,6 +215,44 @@ export default function HomeEarth({
     };
     el.addEventListener("wheel", onWheel, { passive: true });
 
+    // --- touch: swipe to TRAVEL, not spin into the dark side ---
+    // On touch there is no wheel, so a one-finger drag just orbited the globe;
+    // "swiping to scroll" rotated it onto the night side and it read as black.
+    // Instead, disable one-finger orbit and map a deliberate vertical swipe to
+    // the same hand-offs as the wheel: up = out to the cosmos, down = dive into
+    // the portfolio. (Pinch-zoom on the globe still works.)
+    const isTouch =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(pointer: coarse)").matches;
+    let tY = 0;
+    let tX = 0;
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      tY = e.touches[0].clientY;
+      tX = e.touches[0].clientX;
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      const t = e.changedTouches[0];
+      if (!t) return;
+      const dy = t.clientY - tY;
+      const dx = t.clientX - tX;
+      // require a clear, mostly-vertical swipe
+      if (Math.abs(dy) < 46 || Math.abs(dy) < Math.abs(dx) * 1.2) return;
+      if (dy < 0) {
+        handoffRef.current(); // swipe up -> out to the cosmos
+      } else if (!divedRef.current) {
+        divedRef.current = true;
+        diveRef.current(); // swipe down -> dive into the portfolio
+      }
+    };
+    // On a touch-primary device, one-finger orbit is what spun the globe into
+    // the dark side, so turn it off (pinch-zoom still works).
+    if (isTouch) controls.enableRotate = false;
+    // Attach the swipe handlers always: touch events only fire from real touch
+    // input (a no-op for a mouse), so this is safe on every device.
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+
     const onResize = () =>
       world.width(window.innerWidth).height(window.innerHeight);
     window.addEventListener("resize", onResize);
@@ -221,6 +261,8 @@ export default function HomeEarth({
       window.clearInterval(sunTimer);
       el.removeEventListener("mousemove", onMouseMove);
       el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("resize", onResize);
       world._destructor?.();
       globeRef.current = null;
@@ -233,8 +275,10 @@ export default function HomeEarth({
     if (!world) return;
     const live = phase === "active";
     if (live) {
+      // Resume rendering. The size is kept current by the resize listener, so we
+      // intentionally DON'T call setSize here — its buffer reallocation hitched
+      // the start of the fly-back out of the portfolio.
       world.resumeAnimation();
-      world.width(window.innerWidth).height(window.innerHeight);
       divedRef.current = false;
     } else {
       world.pauseAnimation();
