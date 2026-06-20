@@ -135,7 +135,12 @@ export default function App() {
     <div className="app">
       <Canvas
         className="canvas"
-        frameloop="always"
+        // Render the cosmos only when it's the active view. When the globe (or
+        // city/portfolio) is up the cosmos is hidden behind it, so freezing it
+        // means each Earth<->cosmos crossfade renders a single WebGL canvas
+        // (globe live + cosmos frozen, or cosmos live + globe paused) instead of
+        // both at once - which is what stuttered the hand-off.
+        frameloop={earthActive ? "never" : "always"}
         camera={{ position: [0, 0, 6], fov: 50, near: 0.3, far: 150 }}
         dpr={[1, 2]}
         gl={{

@@ -84,6 +84,10 @@ export default function HomeEarth({
       .atmosphereColor("#6ea8ff")
       .atmosphereAltitude(0.2);
     globeRef.current = world;
+    // Cap the pixel ratio: the day/night + atmosphere are full-screen shaders,
+    // so 2x DPI quadruples their per-pixel cost. 1.5x stays crisp while keeping
+    // the globe light enough that the cosmos -> Earth hand-off stays smooth.
+    world.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     if (import.meta.env.DEV)
       (window as unknown as { __globe?: GlobeInstance }).__globe = world;
 
