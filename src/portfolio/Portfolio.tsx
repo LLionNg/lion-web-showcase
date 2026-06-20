@@ -26,6 +26,48 @@ function linkify(text: string) {
   );
 }
 
+// Small cosmos icons for the hero meta line (location | school | degree).
+const IconPlanet = () => (
+  <svg
+    viewBox="0 0 16 16"
+    width="1em"
+    height="1em"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.3"
+    aria-hidden="true"
+  >
+    <circle cx="8" cy="8" r="3.7" />
+    <ellipse cx="8" cy="8" rx="7" ry="2.5" transform="rotate(-22 8 8)" />
+  </svg>
+);
+const IconStar = () => (
+  <svg
+    viewBox="0 0 16 16"
+    width="1em"
+    height="1em"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M8 1.2l1.25 5.55L14.8 8l-5.55 1.25L8 14.8l-1.25-5.55L1.2 8l5.55-1.25z" />
+  </svg>
+);
+const IconOrbit = () => (
+  <svg
+    viewBox="0 0 16 16"
+    width="1em"
+    height="1em"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.3"
+    aria-hidden="true"
+  >
+    <circle cx="8" cy="8" r="1.7" fill="currentColor" stroke="none" />
+    <ellipse cx="8" cy="8" rx="6.6" ry="2.7" />
+    <ellipse cx="8" cy="8" rx="6.6" ry="2.7" transform="rotate(62 8 8)" />
+  </svg>
+);
+
 /**
  * The "digital realm" you dive into at the bottom of the zoom. A futuristic,
  * scroll-driven portfolio overlay seeded with real CV content. `active` gates
@@ -45,9 +87,10 @@ export default function Portfolio({
   const onReturnRef = useRef(onReturn);
   onReturnRef.current = onReturn;
 
-  // 3D tilt: the background plane leans toward the pointer (smoothed via rAF).
-  // Transform string is set on the element directly (no CSS calc/var) so it is
-  // robust across browsers.
+  // 3D tilt: the background plane leans toward the pointer / finger (smoothed via
+  // rAF). Transform string is set on the element directly (no CSS calc/var) so it
+  // is robust across browsers. Touch is handled explicitly (touchmove) so it also
+  // tilts on a phone as you drag/scroll, not just with a mouse.
   useEffect(() => {
     if (!active) return;
     const bg = document.querySelector<HTMLElement>(".pf-bg");
@@ -57,9 +100,14 @@ export default function Portfolio({
       cx = 0,
       cy = 0,
       raf = 0;
-    const onMove = (e: PointerEvent) => {
-      tx = (e.clientX / window.innerWidth - 0.5) * 2;
-      ty = (e.clientY / window.innerHeight - 0.5) * 2;
+    const setTilt = (clientX: number, clientY: number) => {
+      tx = (clientX / window.innerWidth - 0.5) * 2;
+      ty = (clientY / window.innerHeight - 0.5) * 2;
+    };
+    const onPointer = (e: PointerEvent) => setTilt(e.clientX, e.clientY);
+    const onTouch = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (t) setTilt(t.clientX, t.clientY);
     };
     const loop = () => {
       cx += (tx - cx) * 0.06;
@@ -67,10 +115,12 @@ export default function Portfolio({
       bg.style.transform = `perspective(1200px) rotateX(${(cy * -5).toFixed(2)}deg) rotateY(${(cx * 5).toFixed(2)}deg) scale(1.12)`;
       raf = requestAnimationFrame(loop);
     };
-    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointermove", onPointer);
+    window.addEventListener("touchmove", onTouch, { passive: true });
     raf = requestAnimationFrame(loop);
     return () => {
-      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointermove", onPointer);
+      window.removeEventListener("touchmove", onTouch);
       cancelAnimationFrame(raf);
       bg.style.transform = "";
     };
@@ -273,8 +323,20 @@ export default function Portfolio({
                 </a>
               </div>
               <p className="pf-loc">
-                {profile.location} | {profile.education.school} |{" "}
-                {profile.education.degree}
+                <span className="pf-loc__item">
+                  <IconPlanet />
+                  {profile.location}
+                </span>
+                <span className="pf-loc__sep">|</span>
+                <span className="pf-loc__item">
+                  <IconStar />
+                  {profile.education.school}
+                </span>
+                <span className="pf-loc__sep">|</span>
+                <span className="pf-loc__item">
+                  <IconOrbit />
+                  {profile.education.degree}
+                </span>
               </p>
             </div>
             <img className="pf-portrait" src={profile.avatar} alt={profile.name} />

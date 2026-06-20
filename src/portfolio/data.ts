@@ -146,7 +146,7 @@ export const experience: Experience[] = [
     period: "2024 - 2025",
     points: [
       "Built & deployed domain-specific RAG systems across legal, e-commerce, and agriculture.",
-      "Optimized inference with TensorRT - 4-5x speedup via FP16 quantization, operator fusion, dynamic batching.",
+      "Optimized inference with TensorRT - 5x speedup via FP16 quantization, operator fusion, dynamic batching.",
       "Full-stack delivery: frontend UI, API testing, and concurrent load testing for production readiness.",
     ],
   },

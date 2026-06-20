@@ -216,7 +216,29 @@
   line-height: 1.5;
   color: #c5cef0;
 }
-.pf-loc { font-size: 0.86rem; color: var(--pf-muted); }
+.pf-loc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 0.86rem;
+  color: var(--pf-muted);
+}
+.pf-loc__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pf-loc__item svg {
+  width: 0.95em;
+  height: 0.95em;
+  color: var(--pf-cyan);
+  flex-shrink: 0;
+  opacity: 0.92;
+}
+.pf-loc__sep {
+  opacity: 0.4;
+}
 
 /* ---- buttons ---- */
 .pf-cta { display: flex; flex-wrap: wrap; gap: 12px; }
