@@ -246,10 +246,12 @@
   display: inline-flex;
   align-items: center;
   padding: 12px 22px;
+  font-family: inherit;
   font-weight: 600;
   font-size: 0.92rem;
   color: var(--pf-text);
   text-decoration: none;
+  cursor: pointer;
   border: 1px solid rgba(150, 175, 255, 0.28);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
@@ -373,12 +375,6 @@
 }
 
 /* ---- project cards ---- */
-.pf-cards {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 18px;
-}
-.pf-cards--compact { grid-template-columns: repeat(3, 1fr); }
 .pf-card {
   position: relative;
   padding: 24px;
@@ -722,8 +718,6 @@
 }
 @media (max-width: 760px) {
   .pf-stats { grid-template-columns: 1fr; }
-  .pf-cards,
-  .pf-cards--compact,
   .pf-skills { grid-template-columns: 1fr; }
   .pf-portrait { width: min(66%, 260px); }
   .pf-contact__title { white-space: normal; }

@@ -64,7 +64,7 @@ export default function ParticleField({ active }: { active: boolean }) {
         }
         p.x += p.vx;
         p.y += p.vy;
-        // friction + soft speed clamp
+        // friction
         p.vx *= 0.96;
         p.vy *= 0.96;
         // wrap around edges
