@@ -141,7 +141,15 @@ export default function HomeEarth({
     updateSun();
     const sunTimer = window.setInterval(updateSun, 60_000);
 
-    // ---- country hover: outline highlight + stats popup ----
+    // Touch-primary device? Hover needs a pointer, so on phones/tablets we skip
+    // the country polygons entirely below - a big render saving (177 filled +
+    // stroked polygons gone) and the only thing lost is a hover feature touch
+    // can't use anyway. Also disables one-finger orbit (see controls, below).
+    const isTouch =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(pointer: coarse)").matches;
+
+    // ---- country hover: outline highlight + stats popup (pointer devices) ----
     let hovered: Feat | null = null;
     let mx = 0;
     let my = 0;
@@ -173,31 +181,32 @@ export default function HomeEarth({
       popupRef.current?.set(null, 0, 0);
     };
 
-    fetch("/data/countries.geojson")
-      .then((r) => r.json())
-      .then((g) => {
-        world
-          .polygonsData(g.features)
-          .polygonCapColor(() => "rgba(0,0,0,0)")
-          .polygonSideColor(() => "rgba(0,0,0,0)")
-          .polygonStrokeColor(() => "rgba(150,180,255,0.10)")
-          .polygonAltitude(0.006)
-          .onPolygonHover((poly: Feat | null) => {
-            if (poly === hovered) return;
-            hovered = poly;
-            applyHover(poly);
-            if (poly) popupRef.current?.set(statsOf(poly), mx, my);
-            else popupRef.current?.set(null, 0, 0);
-          });
-      })
-      .catch((e) => console.warn("countries:", e));
-
     const onMouseMove = (e: MouseEvent) => {
       mx = e.clientX;
       my = e.clientY;
       if (hovered) popupRef.current?.set(statsOf(hovered), mx, my);
     };
-    el.addEventListener("mousemove", onMouseMove);
+    if (!isTouch) {
+      fetch("/data/countries.geojson")
+        .then((r) => r.json())
+        .then((g) => {
+          world
+            .polygonsData(g.features)
+            .polygonCapColor(() => "rgba(0,0,0,0)")
+            .polygonSideColor(() => "rgba(0,0,0,0)")
+            .polygonStrokeColor(() => "rgba(150,180,255,0.10)")
+            .polygonAltitude(0.006)
+            .onPolygonHover((poly: Feat | null) => {
+              if (poly === hovered) return;
+              hovered = poly;
+              applyHover(poly);
+              if (poly) popupRef.current?.set(statsOf(poly), mx, my);
+              else popupRef.current?.set(null, 0, 0);
+            });
+        })
+        .catch((e) => console.warn("countries:", e));
+      el.addEventListener("mousemove", onMouseMove);
+    }
 
     // ---- controls + zoom hand-offs ----
     const controls = world.controls();
@@ -225,9 +234,6 @@ export default function HomeEarth({
     // Instead, disable one-finger orbit and map a deliberate vertical swipe to
     // the same hand-offs as the wheel: up = out to the cosmos, down = dive into
     // the portfolio. (Pinch-zoom on the globe still works.)
-    const isTouch =
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(pointer: coarse)").matches;
     let tY = 0;
     let tX = 0;
     const onTouchStart = (e: TouchEvent) => {

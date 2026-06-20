@@ -207,9 +207,14 @@ export default function Portfolio({
     wrapper.addEventListener("touchstart", onTouchStart, { passive: true });
     wrapper.addEventListener("touchmove", onTouchMove, { passive: true });
 
-    // Cosmos scroll effect: fade/slide/blur each block by its distance from the
+    // Cosmos scroll effect: fade/slide each block by its distance from the
     // viewport centre — content above and below is hidden and slides in as it
-    // nears the middle, the blur clearing as it warps into focus.
+    // nears the middle. Pointer devices also blur it as it warps into focus;
+    // touch devices skip the per-element blur (a costly GPU pass every frame,
+    // and the single biggest cause of the scroll judder on phones).
+    const isTouch =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(pointer: coarse)").matches;
     const reveals = Array.from(
       wrapper.querySelectorAll<HTMLElement>("[data-reveal]"),
     );
@@ -221,7 +226,9 @@ export default function Portfolio({
         const fade = Math.min(1, Math.max(0, (Math.abs(d) - 0.3) / 0.22));
         el.style.opacity = (1 - fade).toFixed(3);
         el.style.transform = `translate3d(0, ${(d * 46).toFixed(1)}px, 0) scale(${(1 - fade * 0.06).toFixed(3)})`;
-        el.style.filter = fade > 0.02 ? `blur(${(fade * 7).toFixed(1)}px)` : "";
+        if (!isTouch)
+          el.style.filter =
+            fade > 0.02 ? `blur(${(fade * 7).toFixed(1)}px)` : "";
       }
     };
 
