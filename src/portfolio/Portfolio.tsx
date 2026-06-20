@@ -391,34 +391,10 @@ export default function Portfolio({
             ))}
           </div>
 
-          {/* ===== FEATURED WORK ===== */}
-          <section className="pf-section" id="work">
-            <h2 className="pf-h2" data-reveal>
-              <span className="pf-h2__idx">01</span> Featured Work
-            </h2>
-            <ProjectCarousel
-              items={featured}
-              label="Featured work"
-              renderItem={card(true)}
-            />
-          </section>
-
-          {/* ===== MORE PROJECTS ===== */}
-          <section className="pf-section">
-            <h2 className="pf-h2" data-reveal>
-              <span className="pf-h2__idx">02</span> More Projects
-            </h2>
-            <ProjectCarousel
-              items={more}
-              label="More projects"
-              renderItem={card(false)}
-            />
-          </section>
-
           {/* ===== EXPERIENCE ===== */}
           <section className="pf-section">
             <h2 className="pf-h2" data-reveal>
-              <span className="pf-h2__idx">03</span> Experience
+              <span className="pf-h2__idx">01</span> Experience
             </h2>
             <div className="pf-timeline">
               {experience.map((x) => (
@@ -436,6 +412,30 @@ export default function Portfolio({
                 </div>
               ))}
             </div>
+          </section>
+
+          {/* ===== FEATURED WORK ===== */}
+          <section className="pf-section" id="work">
+            <h2 className="pf-h2" data-reveal>
+              <span className="pf-h2__idx">02</span> Featured Work
+            </h2>
+            <ProjectCarousel
+              items={featured}
+              label="Featured work"
+              renderItem={card(true)}
+            />
+          </section>
+
+          {/* ===== MORE PROJECTS ===== */}
+          <section className="pf-section">
+            <h2 className="pf-h2" data-reveal>
+              <span className="pf-h2__idx">03</span> More Projects
+            </h2>
+            <ProjectCarousel
+              items={more}
+              label="More projects"
+              renderItem={card(false)}
+            />
           </section>
 
           {/* ===== SKILLS ===== */}
