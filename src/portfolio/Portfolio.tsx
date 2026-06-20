@@ -78,14 +78,18 @@ export default function Portfolio({
   active,
   landTop,
   onReturn,
+  onScrollExit,
 }: {
   active: boolean;
   landTop: boolean;
   onReturn: () => void;
+  onScrollExit: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const onReturnRef = useRef(onReturn);
   onReturnRef.current = onReturn;
+  const onScrollExitRef = useRef(onScrollExit);
+  onScrollExitRef.current = onScrollExit;
   const lenisRef = useRef<Lenis | null>(null);
 
   // 3D tilt: the background plane leans toward the pointer / finger (smoothed via
@@ -144,6 +148,14 @@ export default function Portfolio({
     lenisRef.current = lenis;
 
     // land at the bottom (deep-zoom dive) or the top (Enter Portfolio button)
+    // "Scroll out": push OUT once pinned at the bottom to ascend back into the
+    // city. Armed once you've moved up into the content OR a short beat after
+    // landing (so a fresh bottom-landing isn't stuck, yet the dive's own
+    // momentum can't bounce you straight back out). Accumulated so it takes a
+    // deliberate push, not a stray tick.
+    let canExit = false;
+    let overscroll = 0;
+    let exited = false;
     let landed = false;
     requestAnimationFrame(() => {
       lenis.resize();
@@ -151,21 +163,13 @@ export default function Portfolio({
         immediate: true,
         force: true,
       });
-      // Only AFTER the landing jump can a scroll arm the exit, so neither the
-      // jump itself nor Lenis's init scroll (fired at the top) can pre-arm it
-      // and bounce a fresh bottom-landing straight back out.
       requestAnimationFrame(() => {
         landed = true;
+        window.setTimeout(() => {
+          canExit = true;
+        }, 600);
       });
     });
-
-    // "Scroll out → Earth": keep pushing OUT once pinned at the bottom and we
-    // fly back to orbit. Armed only after you've moved up into the content (so
-    // landing at the bottom doesn't bounce you out), and accumulated so it
-    // takes a deliberate push, not a stray tick or scroll momentum.
-    let canExit = false;
-    let overscroll = 0;
-    let exited = false;
     const nearBottom = () =>
       wrapper.scrollTop >= wrapper.scrollHeight - wrapper.clientHeight - 4;
     // Arm the exit only once you've moved up into the content. Uses the native
@@ -184,7 +188,7 @@ export default function Portfolio({
         overscroll += amount;
         if (overscroll > threshold) {
           exited = true;
-          onReturnRef.current();
+          onScrollExitRef.current();
         }
       } else if (dir < 0 || !nearBottom()) {
         overscroll = 0; // moving up / away cancels the exit intent
