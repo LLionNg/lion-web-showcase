@@ -249,42 +249,74 @@ body {
   display: block;
 }
 
-/* "Enter Portfolio" shortcut on the Earth view - skips the globe zoom and warps
-   straight into the portfolio. */
-.enter-portfolio {
-  position: fixed;
-  top: 22px;
-  right: 22px;
-  z-index: 12; /* above the caption overlay (10), below the portfolio (20) */
-  padding: 11px 20px;
-  font: 600 0.8rem/1 "Inter", system-ui, sans-serif;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+/* ---- Collapsing icon button (Enter Portfolio + Return to orbit) ----
+   Icon-only by default; the label expands LEFT (icon stays anchored on the right)
+   on hover for a fine pointer, or — on touch — on a first tap, with a second tap
+   firing the action (see IconButton.tsx). Keeps the header controls tiny on
+   phones + tablets while staying on-theme (glass pill). */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px;
   color: var(--fg);
-  background: rgba(110, 168, 255, 0.12);
+  background: rgba(110, 168, 255, 0.14);
   border: 1px solid rgba(110, 168, 255, 0.4);
   border-radius: 999px;
   backdrop-filter: blur(10px);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   transition:
-    transform 0.2s ease,
     background 0.2s ease,
     box-shadow 0.2s ease;
 }
-.enter-portfolio:hover {
-  background: rgba(110, 168, 255, 0.22);
-  box-shadow: 0 0 26px rgba(110, 168, 255, 0.4);
-  transform: translateY(-1px);
+.icon-btn__icon {
+  display: flex;
+  width: 20px;
+  height: 20px;
+  flex: none;
 }
-/* Phones: shrink the pill so it fits the small viewport, same glass theme. */
-@media (max-width: 600px) {
-  .enter-portfolio {
-    top: 14px;
-    right: 14px;
-    padding: 8px 13px;
-    font-size: 0.6rem;
-    letter-spacing: 0.09em;
+.icon-btn__icon svg {
+  width: 100%;
+  height: 100%;
+}
+.icon-btn__label {
+  max-width: 0;
+  margin-right: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
+  font: 600 0.72rem/1 "Inter", system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition:
+    max-width 0.32s ease,
+    opacity 0.24s ease,
+    margin-right 0.32s ease;
+}
+.icon-btn.is-expanded .icon-btn__label {
+  max-width: 220px;
+  margin-right: 9px;
+  opacity: 1;
+}
+@media (hover: hover) {
+  .icon-btn:hover {
+    background: rgba(110, 168, 255, 0.24);
+    box-shadow: 0 0 26px rgba(110, 168, 255, 0.4);
   }
+  .icon-btn:hover .icon-btn__label {
+    max-width: 220px;
+    margin-right: 9px;
+    opacity: 1;
+  }
+}
+
+/* "Enter Portfolio" shortcut on the Earth view - skips the globe zoom and warps
+   straight into the portfolio. (Collapse behaviour comes from .icon-btn.) */
+.enter-portfolio {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 12; /* above the caption overlay (10), below the portfolio (20) */
 }
 
 /* ---- Scene nav: tap the full-width strip at the top (zoom in) or bottom
