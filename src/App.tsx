@@ -12,7 +12,7 @@ import type { EarthPhase } from "./cosmos/HomeEarth";
 // Heavy worlds are code-split so the initial load stays lean.
 const HomeEarth = lazy(() => import("./cosmos/HomeEarth"));
 const Portfolio = lazy(() => import("./portfolio/Portfolio"));
-const CityDive = lazy(() => import("./cosmos/CityDive"));
+const CityStage = lazy(() => import("./cosmos/CityStage"));
 
 // Earth ⟷ cosmos hand-off (zoom out past the globe → solar system).
 const HANDOFF_OFFSET = 0.22;
@@ -31,8 +31,10 @@ export default function App() {
   // the portfolio "world" you dive into at the bottom of the zoom.
   const [inPortfolio, setInPortfolio] = useState(DBG.portfolio);
   const [diving, setDiving] = useState(false);
-  // the neon city descent shown between the globe and the portfolio.
+  // the neon city stage shown between the globe and the portfolio.
   const [inCity, setInCity] = useState(false);
+  // which end the city is entered from: "earth" (top) or "portfolio" (bottom).
+  const [cityEnter, setCityEnter] = useState<"earth" | "portfolio">("earth");
   // bumped on return-to-orbit so the globe flies back out.
   const [homeSignal, setHomeSignal] = useState(0);
   // where the portfolio lands: top (Enter button) vs bottom (deep-zoom dive).
@@ -56,26 +58,38 @@ export default function App() {
     }, DIVE_MS);
   }, []);
 
-  // Earth → city → portfolio: the deep-zoom dive descends through the neon city
-  // first (the Enter Portfolio button skips it). Lands the portfolio at the
-  // bottom, like the original dive.
+  // Earth → city: the deep-zoom dive crossfades into the neon city, entered at
+  // the top (above the skyline). The user controls the descent from there.
   const diveToCity = useCallback(() => {
-    setPortfolioTop(false);
-    setDiving(true);
-    window.setTimeout(() => {
-      setInCity(true);
-      setDiving(false);
-    }, DIVE_MS);
+    setCityEnter("earth");
+    setInCity(true);
   }, []);
-  // City descent finished: reveal the portfolio over it, then drop the city.
-  const onCityDone = useCallback(() => {
+  // City bottom → portfolio (lands at the bottom). Keep the city behind the
+  // portfolio until it has faded in, then drop it.
+  const cityToPortfolio = useCallback(() => {
+    setPortfolioTop(false);
     setInPortfolio(true);
-    window.setTimeout(() => setInCity(false), 1100);
+    window.setTimeout(() => setInCity(false), 900);
+  }, []);
+  // City top → Earth: fly the globe back out.
+  const cityToEarth = useCallback(() => {
+    setInCity(false);
+    setEarthActive(true);
+    setHomeSignal((s) => s + 1);
+  }, []);
+  // Portfolio → city: scrolling out of the portfolio ascends back into the city,
+  // entered at the bottom (street level).
+  const portfolioToCity = useCallback(() => {
+    setCityEnter("portfolio");
+    setInCity(true);
+    setInPortfolio(false);
   }, []);
 
-  // Portfolio → Earth: fly back out to the globe.
+  // Portfolio → Earth: the Return to orbit button flies straight back to the
+  // globe (skips the city, mirroring the Enter Portfolio shortcut).
   const returnToOrbit = useCallback(() => {
     setInPortfolio(false);
+    setInCity(false);
     setEarthActive(true);
     setHomeSignal((s) => s + 1);
   }, []);
@@ -83,7 +97,7 @@ export default function App() {
   // Cosmos → Earth: scrolling back up to the solar system returns to the globe.
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
-      if (earthActive || inPortfolio || diving) return;
+      if (earthActive || inPortfolio || diving || inCity) return;
       if (e.deltaY < 0 && scrollState.offset <= HANDBACK_BELOW)
         setEarthActive(true);
     };
@@ -95,7 +109,7 @@ export default function App() {
       ty = e.touches[0]?.clientY ?? 0;
     };
     const onTouchEnd = (e: TouchEvent) => {
-      if (earthActive || inPortfolio || diving) return;
+      if (earthActive || inPortfolio || diving || inCity) return;
       const dy = (e.changedTouches[0]?.clientY ?? 0) - ty;
       if (dy > 48 && scrollState.offset <= HANDBACK_BELOW) setEarthActive(true);
     };
@@ -106,7 +120,7 @@ export default function App() {
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchend", onTouchEnd);
     };
-  }, [earthActive, inPortfolio, diving]);
+  }, [earthActive, inPortfolio, diving, inCity]);
 
   const earthPhase: EarthPhase =
     inPortfolio || inCity
@@ -174,12 +188,17 @@ export default function App() {
 
       {diving && <div className="warp-flash on" aria-hidden="true" />}
 
-      {/* Neon city descent (deep-zoom dive only). Dark backdrop covers the
-          one-time asset load until the city canvas fades in. */}
+      {/* Neon city stage (Earth <-> City <-> Portfolio). Dark backdrop covers
+          the one-time asset load until the city canvas fades in. */}
       {inCity && <div className="city-backdrop" aria-hidden="true" />}
       {inCity && (
         <Suspense fallback={null}>
-          <CityDive active={inCity} onComplete={onCityDone} />
+          <CityStage
+            active={inCity}
+            enterFrom={cityEnter}
+            onExitToEarth={cityToEarth}
+            onExitToPortfolio={cityToPortfolio}
+          />
         </Suspense>
       )}
 
@@ -188,6 +207,7 @@ export default function App() {
           active={inPortfolio}
           landTop={portfolioTop}
           onReturn={returnToOrbit}
+          onScrollExit={portfolioToCity}
         />
       </Suspense>
 
