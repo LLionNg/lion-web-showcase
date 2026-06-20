@@ -12,7 +12,6 @@ import type { EarthPhase } from "./cosmos/HomeEarth";
 // Heavy worlds are code-split so the initial load stays lean.
 const HomeEarth = lazy(() => import("./cosmos/HomeEarth"));
 const Portfolio = lazy(() => import("./portfolio/Portfolio"));
-const CityStage = lazy(() => import("./cosmos/CityStage"));
 
 // Earth ⟷ cosmos hand-off (zoom out past the globe → solar system).
 const HANDOFF_OFFSET = 0.22;
@@ -31,10 +30,6 @@ export default function App() {
   // the portfolio "world" you dive into at the bottom of the zoom.
   const [inPortfolio, setInPortfolio] = useState(DBG.portfolio);
   const [diving, setDiving] = useState(false);
-  // the neon city stage shown between the globe and the portfolio.
-  const [inCity, setInCity] = useState(false);
-  // which end the city is entered from: "earth" (top) or "portfolio" (bottom).
-  const [cityEnter, setCityEnter] = useState<"earth" | "portfolio">("earth");
   // bumped on return-to-orbit so the globe flies back out.
   const [homeSignal, setHomeSignal] = useState(0);
   // where the portfolio lands: top (Enter button) vs bottom (deep-zoom dive).
@@ -58,46 +53,22 @@ export default function App() {
     }, DIVE_MS);
   }, []);
 
-  // Earth → city: the deep-zoom dive crossfades into the neon city, entered at
-  // the top (above the skyline). The user controls the descent from there.
-  const diveToCity = useCallback(() => {
-    setCityEnter("earth");
-    setInCity(true);
-  }, []);
-  // City bottom → portfolio (lands at the bottom). Keep the city behind the
-  // portfolio until it has faded in, then drop it.
-  const cityToPortfolio = useCallback(() => {
-    setPortfolioTop(false);
-    setInPortfolio(true);
-    window.setTimeout(() => setInCity(false), 900);
-  }, []);
-  // City top → Earth: fly the globe back out.
-  const cityToEarth = useCallback(() => {
-    setInCity(false);
-    setEarthActive(true);
-    setHomeSignal((s) => s + 1);
-  }, []);
-  // Portfolio → city: scrolling out of the portfolio ascends back into the city,
-  // entered at the bottom (street level).
-  const portfolioToCity = useCallback(() => {
-    setCityEnter("portfolio");
-    setInCity(true);
-    setInPortfolio(false);
-  }, []);
-
-  // Portfolio → Earth: the Return to orbit button flies straight back to the
-  // globe (skips the city, mirroring the Enter Portfolio shortcut).
+  // Portfolio → Earth: fly straight back out to the globe — both the Return to
+  // orbit button and pushing out past the bottom of the portfolio land here.
   const returnToOrbit = useCallback(() => {
     setInPortfolio(false);
-    setInCity(false);
     setEarthActive(true);
     setHomeSignal((s) => s + 1);
   }, []);
+
+  // Cosmos → Earth via the on-screen tab — tap to zoom back in to the globe
+  // without hunting for the swipe (matches the wheel/swipe hand-back).
+  const tabToEarth = useCallback(() => setEarthActive(true), []);
 
   // Cosmos → Earth: scrolling back up to the solar system returns to the globe.
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
-      if (earthActive || inPortfolio || diving || inCity) return;
+      if (earthActive || inPortfolio || diving) return;
       if (e.deltaY < 0 && scrollState.offset <= HANDBACK_BELOW)
         setEarthActive(true);
     };
@@ -109,7 +80,7 @@ export default function App() {
       ty = e.touches[0]?.clientY ?? 0;
     };
     const onTouchEnd = (e: TouchEvent) => {
-      if (earthActive || inPortfolio || diving || inCity) return;
+      if (earthActive || inPortfolio || diving) return;
       const dy = (e.changedTouches[0]?.clientY ?? 0) - ty;
       if (dy > 48 && scrollState.offset <= HANDBACK_BELOW) setEarthActive(true);
     };
@@ -120,26 +91,25 @@ export default function App() {
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchend", onTouchEnd);
     };
-  }, [earthActive, inPortfolio, diving, inCity]);
+  }, [earthActive, inPortfolio, diving]);
 
-  const earthPhase: EarthPhase =
-    inPortfolio || inCity
-      ? "hidden"
-      : diving
-        ? "warp"
-        : earthActive
-          ? "active"
-          : "faded";
+  const earthPhase: EarthPhase = inPortfolio
+    ? "hidden"
+    : diving
+      ? "warp"
+      : earthActive
+        ? "active"
+        : "faded";
 
   return (
     <div className="app">
       <Canvas
         className="canvas"
         // Render the cosmos only when it's the active view. When the globe (or
-        // city/portfolio) is up the cosmos is hidden behind it, so freezing it
-        // means each Earth<->cosmos crossfade renders a single WebGL canvas
-        // (globe live + cosmos frozen, or cosmos live + globe paused) instead of
-        // both at once - which is what stuttered the hand-off.
+        // portfolio) is up the cosmos is hidden behind it, so freezing it means
+        // each Earth<->cosmos crossfade renders a single WebGL canvas (globe live
+        // + cosmos frozen, or cosmos live + globe paused) instead of both at once
+        // - which is what stuttered the hand-off.
         frameloop={earthActive ? "never" : "always"}
         camera={{ position: [0, 0, 6], fov: 50, near: 0.3, far: 150 }}
         dpr={[1, 2]}
@@ -173,14 +143,14 @@ export default function App() {
         <HomeEarth
           phase={earthPhase}
           onZoomOutToCosmos={toCosmos}
-          onZoomIntoPortfolio={diveToCity}
+          onZoomIntoPortfolio={() => diveToPortfolio(false)}
           homeSignal={homeSignal}
         />
       </Suspense>
 
-      {/* Shortcut straight into the portfolio (skips the city). Available the
-          whole way from Earth out to the observable universe (active = globe,
-          faded = cosmos), but not mid-warp, in the city, or in the portfolio. */}
+      {/* Shortcut straight into the portfolio. Available the whole way from Earth
+          out to the observable universe (active = globe, faded = cosmos), but not
+          mid-warp or once inside the portfolio. */}
       {(earthPhase === "active" || earthPhase === "faded") && (
         <button
           className="enter-portfolio"
@@ -191,28 +161,37 @@ export default function App() {
         </button>
       )}
 
-      {diving && <div className="warp-flash on" aria-hidden="true" />}
-
-      {/* Neon city stage (Earth <-> City <-> Portfolio). Dark backdrop covers
-          the one-time asset load until the city canvas fades in. */}
-      {inCity && <div className="city-backdrop" aria-hidden="true" />}
-      {inCity && (
-        <Suspense fallback={null}>
-          <CityStage
-            active={inCity}
-            enterFrom={cityEnter}
-            onExitToEarth={cityToEarth}
-            onExitToPortfolio={cityToPortfolio}
-          />
-        </Suspense>
+      {/* Scene tabs: tap to step between adjacent scenes instead of swiping
+          (the touch slide was finicky on phones). Blended into the scene at the
+          edge you'd travel toward — bottom = zoom out, top = zoom back in. */}
+      {earthPhase === "active" && (
+        <button
+          className="scene-tab scene-tab--bottom"
+          onClick={toCosmos}
+          title="Drift out to the Solar System"
+        >
+          <span className="scene-tab__label">Solar System</span>
+          <span className="scene-tab__chev">↓</span>
+        </button>
       )}
+      {earthPhase === "faded" && (
+        <button
+          className="scene-tab scene-tab--top"
+          onClick={tabToEarth}
+          title="Zoom back in to Earth"
+        >
+          <span className="scene-tab__chev">↑</span>
+          <span className="scene-tab__label">Earth</span>
+        </button>
+      )}
+
+      {diving && <div className="warp-flash on" aria-hidden="true" />}
 
       <Suspense fallback={null}>
         <Portfolio
           active={inPortfolio}
           landTop={portfolioTop}
           onReturn={returnToOrbit}
-          onScrollExit={portfolioToCity}
         />
       </Suspense>
 

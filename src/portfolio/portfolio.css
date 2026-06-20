@@ -735,8 +735,28 @@
   }
 }
 
+/* ---- touch devices: drop the glass blur ----
+   backdrop-filter re-blurs everything behind each glass panel every frame; with
+   many cards on screen that is the single heaviest thing on a phone. Turn it off
+   on touch and lean on a more opaque panel fill so the glass look survives. The
+   aurora's animated blur is frozen for the same reason. */
+@media (pointer: coarse) {
+  .portfolio {
+    --pf-glass: rgba(14, 20, 40, 0.74);
+  }
+  .portfolio *,
+  .portfolio *::before,
+  .portfolio *::after {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .pf-aurora {
+    animation: none;
+  }
+}
+
 /* ============================================================
-   The "dive" transition (city street -> portfolio)
+   The "dive" transition (Earth surface -> portfolio)
    ============================================================ */
 .warp-flash {
   position: fixed;

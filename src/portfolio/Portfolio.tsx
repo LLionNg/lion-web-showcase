@@ -78,18 +78,14 @@ export default function Portfolio({
   active,
   landTop,
   onReturn,
-  onScrollExit,
 }: {
   active: boolean;
   landTop: boolean;
   onReturn: () => void;
-  onScrollExit: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const onReturnRef = useRef(onReturn);
   onReturnRef.current = onReturn;
-  const onScrollExitRef = useRef(onScrollExit);
-  onScrollExitRef.current = onScrollExit;
   const lenisRef = useRef<Lenis | null>(null);
 
   // 3D tilt: the background plane leans toward the pointer / finger (smoothed via
@@ -148,8 +144,8 @@ export default function Portfolio({
     lenisRef.current = lenis;
 
     // land at the bottom (deep-zoom dive) or the top (Enter Portfolio button)
-    // "Scroll out": push OUT once pinned at the bottom to ascend back into the
-    // city. Armed once you've moved up into the content OR a short beat after
+    // "Scroll out": push OUT once pinned at the bottom to fly back to orbit.
+    // Armed once you've moved up into the content OR a short beat after
     // landing (so a fresh bottom-landing isn't stuck, yet the dive's own
     // momentum can't bounce you straight back out). Accumulated so it takes a
     // deliberate push, not a stray tick.
@@ -188,7 +184,7 @@ export default function Portfolio({
         overscroll += amount;
         if (overscroll > threshold) {
           exited = true;
-          onScrollExitRef.current();
+          onReturnRef.current();
         }
       } else if (dir < 0 || !nearBottom()) {
         overscroll = 0; // moving up / away cancels the exit intent
@@ -211,9 +207,14 @@ export default function Portfolio({
     wrapper.addEventListener("touchstart", onTouchStart, { passive: true });
     wrapper.addEventListener("touchmove", onTouchMove, { passive: true });
 
-    // Cosmos scroll effect: fade/slide/blur each block by its distance from the
+    // Cosmos scroll effect: fade/slide each block by its distance from the
     // viewport centre — content above and below is hidden and slides in as it
-    // nears the middle, the blur clearing as it warps into focus.
+    // nears the middle. Pointer devices also blur it as it warps into focus;
+    // touch devices skip the per-element blur (a costly GPU pass every frame,
+    // and the single biggest cause of the scroll judder on phones).
+    const isTouch =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(pointer: coarse)").matches;
     const reveals = Array.from(
       wrapper.querySelectorAll<HTMLElement>("[data-reveal]"),
     );
@@ -225,7 +226,9 @@ export default function Portfolio({
         const fade = Math.min(1, Math.max(0, (Math.abs(d) - 0.3) / 0.22));
         el.style.opacity = (1 - fade).toFixed(3);
         el.style.transform = `translate3d(0, ${(d * 46).toFixed(1)}px, 0) scale(${(1 - fade * 0.06).toFixed(3)})`;
-        el.style.filter = fade > 0.02 ? `blur(${(fade * 7).toFixed(1)}px)` : "";
+        if (!isTouch)
+          el.style.filter =
+            fade > 0.02 ? `blur(${(fade * 7).toFixed(1)}px)` : "";
       }
     };
 
