@@ -21,6 +21,17 @@ const HANDBACK_BELOW = 0.18;
 // Length of the "dive" warp into the portfolio — must match the CSS animation.
 const DIVE_MS = 1150;
 
+// On touch devices the cosmos shaders (especially the ray-marched black hole,
+// which runs per device pixel) are the scroll bottleneck, so cap the canvas DPR
+// there: 1.5x stays clean over mostly-dark space and cuts the per-pixel fragment
+// cost ~40% vs 2x. Desktop keeps full 2x. Matches the globe's cap.
+const COSMOS_DPR_MAX =
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(pointer: coarse)").matches
+    ? 1.5
+    : 2;
+
 const scrollEl = () =>
   [...document.querySelectorAll("div")].find(
     (e) => e.scrollHeight > e.clientHeight + 5,
@@ -145,7 +156,7 @@ export default function App() {
         // - which is what stuttered the hand-off.
         frameloop={earthActive ? "never" : "always"}
         camera={{ position: [0, 0, 6], fov: 50, near: 0.3, far: 150 }}
-        dpr={[1, 2]}
+        dpr={[1, COSMOS_DPR_MAX]}
         gl={{
           antialias: true,
           powerPreference: "high-performance",
