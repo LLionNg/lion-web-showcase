@@ -199,6 +199,18 @@ export type Experience = {
 export const experience: Experience[] = [
   {
     role: "AI Engineer",
+    org: "Innovate AI Co., Ltd.",
+    period: "2026 - Present",
+    points: [
+      "Built and deployed real-time computer-vision detection systems to production (weapon detection, cashier fraud detection, continuous object detection), with TensorRT FP16/FP8 quantization for low-latency inference.",
+      "Designed and shipped RAG chatbot systems across multiple business domains, including prompt engineering to refactor and optimize raw prompts into clean, structured formats.",
+      "Re-architected multiple AI projects to eliminate LangChain, LangGraph, and Langfuse entirely, migrating to a zero-dependency in-house stack with custom state-management engines built directly on the raw model SDKs.",
+      "Delivered the AI projects full-stack, with black-box, white-box, and concurrent load testing on every service before production.",
+      "Acted as data engineer for the AI teams, owning databases across projects and building data-preprocessing pipelines, complex query workflows, and PGVector schemas for vector search.",
+    ],
+  },
+  {
+    role: "AI Engineer",
     org: "DeepCapital Co., Ltd.",
     period: "2024 - 2025",
     points: [
