@@ -105,7 +105,9 @@
   z-index: 1;
   max-width: 1080px;
   margin: 0 auto;
-  padding: 0 clamp(20px, 5vw, 64px) 8vh;
+  /* No bottom padding: the full-bleed .pf-explore CTA is the last element and
+     provides the bottom band itself (so it sits flush at the very bottom). */
+  padding: 0 clamp(20px, 5vw, 64px) 0;
 }
 
 /* ---- return button ---- */
@@ -702,27 +704,44 @@
    label + bobbing down-chevron. Tap it (mobile) or keep pushing out past the
    bottom to fly back to orbit. */
 .pf-explore {
+  /* Full-bleed + tall: the whole bottom band is the tap target (anywhere across
+     the width, not just on the text), mirroring the cosmos scene-nav strips. The
+     100vw + left/translate breaks out of .pf-inner's max-width and side padding. */
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.45rem;
-  margin: 2.6rem auto 0.4rem;
-  padding: 0.7rem 1.6rem;
-  background: none;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 18vh;
+  margin-top: 2.4rem;
+  padding: 1.6rem 1rem calc(1.6rem + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(
+    to top,
+    rgba(110, 168, 255, 0.12),
+    rgba(110, 168, 255, 0) 78%
+  );
   border: 0;
   cursor: pointer;
-  font: 600 0.68rem/1 "Inter", system-ui, sans-serif;
+  font: 600 0.7rem/1 "Inter", system-ui, sans-serif;
   letter-spacing: 0.26em;
   text-transform: uppercase;
   color: var(--pf-text);
-  opacity: 0.82;
+  opacity: 0.85;
   transition:
     opacity 0.25s ease,
-    color 0.25s ease;
+    background 0.25s ease;
 }
 .pf-explore:hover {
   opacity: 1;
-  color: var(--pf-cyan);
+  background: linear-gradient(
+    to top,
+    rgba(110, 168, 255, 0.18),
+    rgba(110, 168, 255, 0) 78%
+  );
 }
 .pf-explore__chev {
   font-size: 1.25rem;
