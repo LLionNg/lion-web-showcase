@@ -6,6 +6,7 @@ import * as THREE from "three";
 import Experience from "./cosmos/Experience";
 import Overlay from "./cosmos/Overlay";
 import SceneNav from "./cosmos/SceneNav";
+import IconButton, { RocketIcon } from "./cosmos/IconButton";
 import { SCENES } from "./cosmos/scenes";
 import { DBG } from "./cosmos/debug";
 import { scrollState } from "./cosmos/progress";
@@ -211,13 +212,12 @@ export default function App() {
           out to the observable universe (active = globe, faded = cosmos), but not
           mid-warp or once inside the portfolio. */}
       {(earthPhase === "active" || earthPhase === "faded") && (
-        <button
+        <IconButton
           className="enter-portfolio"
+          icon={<RocketIcon />}
+          label="Enter Portfolio"
           onClick={() => diveToPortfolio(true)}
-          title="Go straight to the top of the portfolio"
-        >
-          Enter Portfolio
-        </button>
+        />
       )}
 
       {/* Dynamic scene nav: tap the full-width strip at the top (zoom in) or

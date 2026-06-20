@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import Lenis from "lenis";
 import ParticleField from "./ParticleField";
+import IconButton, { OrbitIcon } from "../cosmos/IconButton";
 import ProjectCarousel from "./ProjectCarousel";
 import { profile, stats, projects, experience, skills, type Project } from "./data";
 import "./portfolio.css";
@@ -307,9 +308,12 @@ export default function Portfolio({
         <div className="pf-grid" />
       </div>
 
-      <button className="pf-return" onClick={onReturn} title="Back to orbit">
-        Return to orbit
-      </button>
+      <IconButton
+        className="pf-return"
+        icon={<OrbitIcon />}
+        label="Return to orbit"
+        onClick={onReturn}
+      />
 
       <div className="pf-scroll" ref={scrollRef}>
         <div className="pf-inner">
