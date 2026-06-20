@@ -157,6 +157,7 @@ export const experience: Experience[] = [
     points: [
       "Exhibition-selected Project (Legal RAG System): Developed a Retrieval-Augmented Generation system for legal document analysis, implementing HybridRAG architecture and Hypothetical Document Embeddings (HyDE).",
       "Liver Ultrasound Cancer Detection: Developed an end-to-end pipeline for liver cancer detection, leveraging the YOLOv10 model for object localization and classification.",
+      "Thai Image Captioning: Adapted the state-of-the-art mPLUG vision-language model for Thai through a custom BertTokenizer and BertDecoder implementation.",
     ],
   },
   {
