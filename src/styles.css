@@ -326,3 +326,24 @@ body {
   pointer-events: none;
   opacity: 0;
 }
+/* dark scrim + stronger text so the caption reads over the bright neon city */
+.city-caption::before {
+  content: "";
+  position: absolute;
+  inset: -26px -52px -20px;
+  z-index: -1;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(2, 4, 12, 0.82),
+    rgba(2, 4, 12, 0.45) 58%,
+    transparent 80%
+  );
+  pointer-events: none;
+}
+.city-caption .caption__title {
+  text-shadow: 0 2px 22px rgba(0, 0, 0, 0.9);
+}
+.city-caption .caption__body {
+  color: #d2dcf6;
+  text-shadow: 0 1px 16px rgba(0, 0, 0, 0.95);
+}

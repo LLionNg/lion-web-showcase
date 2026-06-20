@@ -86,7 +86,7 @@ export const projects: Project[] = [
       "Re-authored an open-source Three.js scene into a personal showcase - re-modeled in Blender, custom GLSL shaders, GSAP animation, bloom post-processing, and a Draco/KTX2/Basis asset pipeline for fast loads.",
     tags: ["Three.js", "GLSL", "GSAP", "Blender", "KTX2"],
     year: "2024",
-    link: { label: "devlionng.com", href: "https://devlionng.com" },
+    link: { label: "ramen.devlionng.com", href: "https://ramen.devlionng.com" },
     featured: true,
   },
   {
