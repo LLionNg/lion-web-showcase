@@ -277,56 +277,65 @@ body {
   transform: translateY(-1px);
 }
 
-/* ---- Scene tabs: tap to step to the adjacent scene (no swipe needed) ----
-   Blended pills at the edge you travel toward: bottom = zoom out to the cosmos,
-   top = zoom back in to Earth. A bobbing chevron hints the direction. Sized as a
-   comfortable touch target so phones don't depend on the finicky swipe. */
-.scene-tab {
+/* ---- Scene nav: tap the full-width strip at the top (zoom in) or bottom
+   (zoom out) to smooth-scroll to the adjacent scene. The strips are visual only
+   (pointer-events: none); taps are detected globally in SceneNav so they never
+   block globe-orbit or cosmos-scroll. The label is the adjacent scene's name and
+   updates per scene; a bobbing chevron hints the direction. */
+.scene-nav {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 12; /* above the caption overlay (10), below the portfolio (20) */
+  inset: 0;
+  z-index: 11; /* above the caption overlay (10), below Enter Portfolio (12) */
+  pointer-events: none;
+}
+.scene-zone {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 18vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.6rem 1.2rem;
-  font: 600 0.66rem/1 "Inter", system-ui, sans-serif;
-  letter-spacing: 0.26em;
+  gap: 0.35rem;
+  font: 600 0.64rem/1 "Inter", system-ui, sans-serif;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--fg);
-  background: rgba(110, 168, 255, 0.08);
-  border: 1px solid rgba(110, 168, 255, 0.26);
-  border-radius: 14px;
-  backdrop-filter: blur(6px);
-  cursor: pointer;
-  opacity: 0.8;
-  transition:
-    opacity 0.25s ease,
-    background 0.25s ease,
-    box-shadow 0.25s ease;
+  opacity: 0.92;
 }
-.scene-tab:hover {
-  opacity: 1;
-  background: rgba(110, 168, 255, 0.16);
-  box-shadow: 0 0 24px rgba(110, 168, 255, 0.32);
+.scene-zone--top {
+  top: 0;
+  justify-content: flex-start;
+  padding-top: 2.6vh;
+  background: linear-gradient(
+    to bottom,
+    rgba(110, 168, 255, 0.12),
+    rgba(110, 168, 255, 0) 72%
+  );
 }
-.scene-tab--bottom {
-  bottom: 4.5vh;
+.scene-zone--bottom {
+  bottom: 0;
+  justify-content: flex-end;
+  padding-bottom: 2.6vh;
+  background: linear-gradient(
+    to top,
+    rgba(110, 168, 255, 0.12),
+    rgba(110, 168, 255, 0) 72%
+  );
 }
-.scene-tab--top {
-  top: 3vh;
+.scene-zone__label {
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.85);
 }
-.scene-tab__chev {
+.scene-zone__chev {
   font-size: 1.05rem;
   line-height: 0.5;
   color: var(--accent);
 }
-.scene-tab--bottom .scene-tab__chev {
-  animation: bob 1.8s ease-in-out infinite;
-}
-.scene-tab--top .scene-tab__chev {
+.scene-zone--top .scene-zone__chev {
   animation: bobUp 1.8s ease-in-out infinite;
+}
+.scene-zone--bottom .scene-zone__chev {
+  animation: bob 1.8s ease-in-out infinite;
 }
 @keyframes bobUp {
   0%,
@@ -340,7 +349,7 @@ body {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .scene-tab__chev {
+  .scene-zone__chev {
     animation: none;
   }
 }
