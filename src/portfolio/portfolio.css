@@ -216,7 +216,29 @@
   line-height: 1.5;
   color: #c5cef0;
 }
-.pf-loc { font-size: 0.86rem; color: var(--pf-muted); }
+.pf-loc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 0.86rem;
+  color: var(--pf-muted);
+}
+.pf-loc__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pf-loc__item svg {
+  width: 0.95em;
+  height: 0.95em;
+  color: var(--pf-cyan);
+  flex-shrink: 0;
+  opacity: 0.92;
+}
+.pf-loc__sep {
+  opacity: 0.4;
+}
 
 /* ---- buttons ---- */
 .pf-cta { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -429,6 +451,135 @@
   text-decoration: none;
 }
 .pf-card__link:hover { text-decoration: underline; }
+
+/* ===== Cosmos project carousel (Featured Work / More Projects) =====
+   Infinite, drag/swipe-able slider. The component's JS owns each card's
+   transform/opacity (depth + focus), so carousel cards must NOT transition
+   transform here, or the per-frame updates smear. */
+.pf-carousel {
+  position: relative;
+  /* faint deep-space well so the warp starfield reads against the busy bg */
+  background: radial-gradient(
+    120% 92% at 50% 50%,
+    rgba(4, 6, 16, 0.5),
+    transparent 70%
+  );
+  border-radius: 26px;
+}
+.pf-carousel__stars {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.85;
+}
+.pf-carousel__viewport {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  padding: 30px 0 36px;
+  cursor: grab;
+  touch-action: pan-y; /* horizontal = carousel, vertical = page scroll */
+  -webkit-mask: linear-gradient(
+    90deg,
+    transparent,
+    #000 7%,
+    #000 93%,
+    transparent
+  );
+  mask: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+.pf-carousel__viewport.is-dragging {
+  cursor: grabbing;
+}
+.pf-carousel__track {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+  width: max-content;
+  will-change: transform;
+}
+.pf-carousel .pf-card {
+  flex: 0 0 clamp(264px, 78vw, 360px);
+  width: clamp(264px, 78vw, 360px);
+  display: flex;
+  flex-direction: column;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+  will-change: transform, opacity;
+  transform-origin: 50% 55%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.pf-carousel .pf-card .pf-card__blurb {
+  flex: 1; /* push tags/link to the bottom so cards align */
+}
+.pf-carousel .pf-card:hover {
+  border-color: rgba(150, 180, 255, 0.45);
+  box-shadow:
+    0 24px 60px rgba(15, 25, 70, 0.55),
+    0 0 34px rgba(110, 168, 255, 0.2);
+}
+.pf-carousel .pf-card a {
+  -webkit-user-drag: none;
+}
+
+.pf-carousel__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  font-size: 1.7rem;
+  line-height: 1;
+  color: var(--pf-text);
+  background: rgba(12, 18, 38, 0.62);
+  border: 1px solid var(--pf-line);
+  border-radius: 50%;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease;
+}
+.pf-carousel__nav:hover {
+  background: rgba(110, 168, 255, 0.22);
+  border-color: rgba(110, 168, 255, 0.5);
+  box-shadow: 0 0 26px rgba(110, 168, 255, 0.4);
+}
+.pf-carousel__nav:active {
+  transform: translateY(-50%) scale(0.9);
+}
+.pf-carousel__nav span {
+  display: block;
+  margin-top: -4px;
+}
+.pf-carousel__nav--prev {
+  left: 2px;
+}
+.pf-carousel__nav--next {
+  right: 2px;
+}
+@media (max-width: 760px) {
+  .pf-carousel__nav {
+    width: 40px;
+    height: 40px;
+    font-size: 1.4rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf-carousel__stars {
+    display: none;
+  }
+}
 
 /* inline links inside body copy (e.g. a project URL in an experience bullet) */
 .pf-inline-link {
