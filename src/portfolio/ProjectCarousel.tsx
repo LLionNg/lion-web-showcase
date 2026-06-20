@@ -50,6 +50,7 @@ export default function ProjectCarousel<T>({
     let vel = 0; // px/frame
     let target: number | null = null; // arrow / wheel-snap goal
     let period = 0; // width of one copy of the items
+    let cardStep = 0; // one card + gap (an arrow advances exactly this)
     let centers: number[] = []; // each card's resting centre within the track
     let lifts: number[] = []; // eased hover lift per card
     let hovered: HTMLElement | null = null;
@@ -77,6 +78,7 @@ export default function ProjectCarousel<T>({
       const els = cards();
       if (els.length <= items.length) return;
       period = els[items.length].offsetLeft - els[0].offsetLeft;
+      cardStep = (els[1] ?? els[0]).offsetLeft - els[0].offsetLeft || period;
       centers = els.map((el) => el.offsetLeft + el.offsetWidth / 2);
       if (lifts.length !== els.length) lifts = els.map(() => 0);
       if (!pos && period) pos = -period; // start on the 2nd copy
@@ -296,15 +298,14 @@ export default function ProjectCarousel<T>({
       }
     };
 
-    const step = () => Math.max(period * 0.34, viewport.clientWidth * 0.8);
-    const goPrev = () => {
-      target = (target ?? pos) + step();
+    // arrows advance exactly ONE project, snapped to card alignment
+    const goBy = (dir: number) => {
+      const s = cardStep || viewport.clientWidth * 0.5;
+      target = Math.round((target ?? pos) / s) * s + dir * s;
       wake();
     };
-    const goNext = () => {
-      target = (target ?? pos) - step();
-      wake();
-    };
+    const goPrev = () => goBy(1); // ‹ shows the previous project
+    const goNext = () => goBy(-1); // › shows the next project
 
     viewport.addEventListener("pointerdown", onDown);
     viewport.addEventListener("pointermove", onMove);

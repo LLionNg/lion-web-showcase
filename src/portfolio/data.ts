@@ -86,7 +86,7 @@ export const projects: Project[] = [
   },
   {
     id: "flashbsoft",
-    title: "Flashbsoft - AI Flashcards",
+    title: "Flashboi - AI Flashcards",
     blurb:
       "An AI-driven flashcard generator using Llama 3 + RAG to extract and convert PDF content into personalized, interactive study materials with progress tracking.",
     tags: ["Llama 3", "RAG", "PDF", "EdTech"],
