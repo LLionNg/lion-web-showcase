@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import Lenis from "lenis";
 import ParticleField from "./ParticleField";
-import { profile, stats, projects, experience, skills } from "./data";
+import ProjectCarousel from "./ProjectCarousel";
+import { profile, stats, projects, experience, skills, type Project } from "./data";
 import "./portfolio.css";
 
 // Wrap bare *.devlionng.com domains (and full URLs) in clickable links so URLs
@@ -192,6 +193,42 @@ export default function Portfolio({
   const featured = projects.filter((p) => p.featured);
   const more = projects.filter((p) => !p.featured);
 
+  // One card renderer for both carousels; `key` is supplied by the carousel
+  // (the list is repeated for the infinite loop). Badge/link render when present
+  // so new projects only need a `data.ts` entry.
+  const card =
+    (feature: boolean) =>
+    (p: Project, key: string) => (
+      <article
+        className={`pf-card${feature ? " pf-card--feature" : ""}`}
+        key={key}
+      >
+        <div className="pf-card__top">
+          <span className="pf-card__year">{p.year}</span>
+          {p.badge && <span className="pf-card__badge">{p.badge}</span>}
+        </div>
+        <h3 className="pf-card__title">{p.title}</h3>
+        <p className="pf-card__blurb">{p.blurb}</p>
+        <div className="pf-tags">
+          {p.tags.map((t) => (
+            <span className="pf-tag" key={t}>
+              {t}
+            </span>
+          ))}
+        </div>
+        {p.link && (
+          <a
+            className="pf-card__link"
+            href={p.link.href}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {p.link.label}
+          </a>
+        )}
+      </article>
+    );
+
   return (
     <section
       className={`portfolio ${active ? "portfolio--on" : ""}`}
@@ -272,34 +309,11 @@ export default function Portfolio({
             <h2 className="pf-h2" data-reveal>
               <span className="pf-h2__idx">01</span> Featured Work
             </h2>
-            <div className="pf-cards">
-              {featured.map((p) => (
-                <article className="pf-card pf-card--feature" key={p.id} data-reveal>
-                  <div className="pf-card__top">
-                    <span className="pf-card__year">{p.year}</span>
-                    {p.badge && <span className="pf-card__badge">{p.badge}</span>}
-                  </div>
-                  <h3 className="pf-card__title">{p.title}</h3>
-                  <p className="pf-card__blurb">{p.blurb}</p>
-                  <div className="pf-tags">
-                    {p.tags.map((t) => (
-                      <span className="pf-tag" key={t}>
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                  {p.link && (
-                    <a
-                      className="pf-card__link"
-                      href={p.link.href}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {p.link.label}                    </a>
-                  )}
-                </article>
-              ))}
-            </div>
+            <ProjectCarousel
+              items={featured}
+              label="Featured work"
+              renderItem={card(true)}
+            />
           </section>
 
           {/* ===== MORE PROJECTS ===== */}
@@ -307,24 +321,11 @@ export default function Portfolio({
             <h2 className="pf-h2" data-reveal>
               <span className="pf-h2__idx">02</span> More Projects
             </h2>
-            <div className="pf-cards pf-cards--compact">
-              {more.map((p) => (
-                <article className="pf-card" key={p.id} data-reveal>
-                  <div className="pf-card__top">
-                    <span className="pf-card__year">{p.year}</span>
-                  </div>
-                  <h3 className="pf-card__title">{p.title}</h3>
-                  <p className="pf-card__blurb">{p.blurb}</p>
-                  <div className="pf-tags">
-                    {p.tags.map((t) => (
-                      <span className="pf-tag" key={t}>
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </article>
-              ))}
-            </div>
+            <ProjectCarousel
+              items={more}
+              label="More projects"
+              renderItem={card(false)}
+            />
           </section>
 
           {/* ===== EXPERIENCE ===== */}
