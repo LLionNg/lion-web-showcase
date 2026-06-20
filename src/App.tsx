@@ -12,6 +12,7 @@ import type { EarthPhase } from "./cosmos/HomeEarth";
 // Heavy worlds are code-split so the initial load stays lean.
 const HomeEarth = lazy(() => import("./cosmos/HomeEarth"));
 const Portfolio = lazy(() => import("./portfolio/Portfolio"));
+const CityDive = lazy(() => import("./cosmos/CityDive"));
 
 // Earth ⟷ cosmos hand-off (zoom out past the globe → solar system).
 const HANDOFF_OFFSET = 0.22;
@@ -30,6 +31,8 @@ export default function App() {
   // the portfolio "world" you dive into at the bottom of the zoom.
   const [inPortfolio, setInPortfolio] = useState(DBG.portfolio);
   const [diving, setDiving] = useState(false);
+  // the neon city descent shown between the globe and the portfolio.
+  const [inCity, setInCity] = useState(false);
   // bumped on return-to-orbit so the globe flies back out.
   const [homeSignal, setHomeSignal] = useState(0);
   // where the portfolio lands: top (Enter button) vs bottom (deep-zoom dive).
@@ -51,6 +54,23 @@ export default function App() {
       setInPortfolio(true);
       setDiving(false);
     }, DIVE_MS);
+  }, []);
+
+  // Earth → city → portfolio: the deep-zoom dive descends through the neon city
+  // first (the Enter Portfolio button skips it). Lands the portfolio at the
+  // bottom, like the original dive.
+  const diveToCity = useCallback(() => {
+    setPortfolioTop(false);
+    setDiving(true);
+    window.setTimeout(() => {
+      setInCity(true);
+      setDiving(false);
+    }, DIVE_MS);
+  }, []);
+  // City descent finished: reveal the portfolio over it, then drop the city.
+  const onCityDone = useCallback(() => {
+    setInPortfolio(true);
+    window.setTimeout(() => setInCity(false), 1100);
   }, []);
 
   // Portfolio → Earth: fly back out to the globe.
@@ -88,13 +108,14 @@ export default function App() {
     };
   }, [earthActive, inPortfolio, diving]);
 
-  const earthPhase: EarthPhase = inPortfolio
-    ? "hidden"
-    : diving
-      ? "warp"
-      : earthActive
-        ? "active"
-        : "faded";
+  const earthPhase: EarthPhase =
+    inPortfolio || inCity
+      ? "hidden"
+      : diving
+        ? "warp"
+        : earthActive
+          ? "active"
+          : "faded";
 
   return (
     <div className="app">
@@ -133,14 +154,15 @@ export default function App() {
         <HomeEarth
           phase={earthPhase}
           onZoomOutToCosmos={toCosmos}
-          onZoomIntoPortfolio={diveToPortfolio}
+          onZoomIntoPortfolio={diveToCity}
           homeSignal={homeSignal}
         />
       </Suspense>
 
-      {/* Shortcut straight into the portfolio (skips the globe zoom). Reuses
-          the same warp transition as the deep-zoom dive. */}
-      {earthPhase === "active" && (
+      {/* Shortcut straight into the portfolio (skips the city). Available the
+          whole way from Earth out to the observable universe (active = globe,
+          faded = cosmos), but not mid-warp, in the city, or in the portfolio. */}
+      {(earthPhase === "active" || earthPhase === "faded") && (
         <button
           className="enter-portfolio"
           onClick={() => diveToPortfolio(true)}
@@ -151,6 +173,15 @@ export default function App() {
       )}
 
       {diving && <div className="warp-flash on" aria-hidden="true" />}
+
+      {/* Neon city descent (deep-zoom dive only). Dark backdrop covers the
+          one-time asset load until the city canvas fades in. */}
+      {inCity && <div className="city-backdrop" aria-hidden="true" />}
+      {inCity && (
+        <Suspense fallback={null}>
+          <CityDive active={inCity} onComplete={onCityDone} />
+        </Suspense>
+      )}
 
       <Suspense fallback={null}>
         <Portfolio
