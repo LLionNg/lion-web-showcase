@@ -137,6 +137,20 @@
   transform: translateY(-1px);
 }
 .pf-return__icon { font-size: 1rem; }
+/* Phones: shrink the pill so it fits the small viewport, same glass theme. */
+@media (max-width: 600px) {
+  .pf-return {
+    top: 14px;
+    right: 14px;
+    padding: 7px 12px;
+    font-size: 0.6rem;
+    letter-spacing: 0.09em;
+    gap: 6px;
+  }
+  .pf-return__icon {
+    font-size: 0.85rem;
+  }
+}
 
 /* ---- hero ---- */
 .pf-hero {
