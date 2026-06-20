@@ -276,6 +276,16 @@ body {
   box-shadow: 0 0 26px rgba(110, 168, 255, 0.4);
   transform: translateY(-1px);
 }
+/* Phones: shrink the pill so it fits the small viewport, same glass theme. */
+@media (max-width: 600px) {
+  .enter-portfolio {
+    top: 14px;
+    right: 14px;
+    padding: 8px 13px;
+    font-size: 0.6rem;
+    letter-spacing: 0.09em;
+  }
+}
 
 /* ---- Scene nav: tap the full-width strip at the top (zoom in) or bottom
    (zoom out) to smooth-scroll to the adjacent scene. The strips are visual only
