@@ -105,7 +105,9 @@
   z-index: 1;
   max-width: 1080px;
   margin: 0 auto;
-  padding: 0 clamp(20px, 5vw, 64px) 8vh;
+  /* No bottom padding: the full-bleed .pf-explore CTA is the last element and
+     provides the bottom band itself (so it sits flush at the very bottom). */
+  padding: 0 clamp(20px, 5vw, 64px) 0;
 }
 
 /* ---- return button ---- */
@@ -696,6 +698,62 @@
 }
 .pf-contact .pf-cta { justify-content: center; }
 .pf-foot { font-size: 0.8rem; color: var(--pf-muted); margin-top: 8px; }
+
+/* ---- "Explore the cosmos" CTA: the seam back out to Earth ----
+   Sits below the footer and mirrors the cosmos scene-nav indicators - a tappable
+   label + bobbing down-chevron. Tap it (mobile) or keep pushing out past the
+   bottom to fly back to orbit. */
+.pf-explore {
+  /* Full-bleed + tall: the whole bottom band is the tap target (anywhere across
+     the width, not just on the text), mirroring the cosmos scene-nav strips. The
+     100vw + left/translate breaks out of .pf-inner's max-width and side padding. */
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 18vh;
+  margin-top: 2.4rem;
+  padding: 1.6rem 1rem calc(1.6rem + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(
+    to top,
+    rgba(110, 168, 255, 0.12),
+    rgba(110, 168, 255, 0) 78%
+  );
+  border: 0;
+  cursor: pointer;
+  font: 600 0.7rem/1 "Inter", system-ui, sans-serif;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--pf-text);
+  opacity: 0.85;
+  transition:
+    opacity 0.25s ease,
+    background 0.25s ease;
+}
+.pf-explore:hover {
+  opacity: 1;
+  background: linear-gradient(
+    to top,
+    rgba(110, 168, 255, 0.18),
+    rgba(110, 168, 255, 0) 78%
+  );
+}
+.pf-explore__chev {
+  font-size: 1.25rem;
+  line-height: 0.5;
+  color: var(--pf-cyan);
+  animation: bob 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf-explore__chev {
+    animation: none;
+  }
+}
 
 /* ---- scroll reveal ---- */
 /* scroll-cosmos: opacity/transform/filter are driven per-frame from JS */

@@ -76,7 +76,25 @@ export default function HomeEarth({
     const el = ref.current;
     if (!el) return;
 
-    const world: GlobeInstance = new Globe(el, { animateIn: false })
+    // Touch-primary device? Used below to drop MSAA, skip the country polygons,
+    // and disable one-finger orbit — pointer / desktop-GPU features whose cost
+    // isn't worth it on a phone's limited fill rate.
+    const isTouch =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(pointer: coarse)").matches;
+
+    const world: GlobeInstance = new Globe(el, {
+      animateIn: false,
+      // No MSAA on touch: the globe there is just smooth spheres (the country
+      // polygons are skipped) and the atmosphere glow hides the silhouette
+      // aliasing, so antialiasing buys little but costs real mobile fill-rate /
+      // bandwidth. Desktop keeps it for crisp polygon borders.
+      rendererConfig: {
+        antialias: !isTouch,
+        alpha: true,
+        powerPreference: "high-performance",
+      },
+    })
       .width(window.innerWidth)
       .height(window.innerHeight)
       .backgroundColor("rgba(0,0,0,0)")
@@ -140,14 +158,6 @@ export default function HomeEarth({
     };
     updateSun();
     const sunTimer = window.setInterval(updateSun, 60_000);
-
-    // Touch-primary device? Hover needs a pointer, so on phones/tablets we skip
-    // the country polygons entirely below - a big render saving (177 filled +
-    // stroked polygons gone) and the only thing lost is a hover feature touch
-    // can't use anyway. Also disables one-finger orbit (see controls, below).
-    const isTouch =
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(pointer: coarse)").matches;
 
     // ---- country hover: outline highlight + stats popup (pointer devices) ----
     let hovered: Feat | null = null;

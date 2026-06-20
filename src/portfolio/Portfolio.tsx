@@ -476,6 +476,14 @@ export default function Portfolio({
               between stars
             </p>
           </footer>
+
+          {/* Bottom-of-portfolio seam back out to Earth — tap it (mobile) or
+              keep pushing out past the bottom to fly back to orbit. Mirrors the
+              cosmos scene-nav indicators. */}
+          <button className="pf-explore" type="button" onClick={onReturn}>
+            <span className="pf-explore__label">Explore the cosmos</span>
+            <span className="pf-explore__chev">↓</span>
+          </button>
         </div>
       </div>
     </section>
