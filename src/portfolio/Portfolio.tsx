@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import Lenis from "lenis";
 import ParticleField from "./ParticleField";
+import VideoName from "./VideoName";
 import IconButton, { OrbitIcon } from "../cosmos/IconButton";
 import ProjectCarousel from "./ProjectCarousel";
 import { profile, stats, projects, experience, skills, type Project } from "./data";
@@ -323,7 +324,7 @@ export default function Portfolio({
               <p className="pf-kicker">
                 <span className="pf-dot" /> arrived | {profile.handle.toLowerCase()}.exe
               </p>
-              <h1 className="pf-name">{profile.name}</h1>
+              <VideoName name={profile.name} src="/portfolio/name.mp4" />
               <p className="pf-role">{profile.title}</p>
               <p className="pf-tagline">{profile.tagline}</p>
               <div className="pf-cta">

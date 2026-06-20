@@ -13,3 +13,6 @@ dist-ssr
 !.env.example
 npm-debug.log*
 *.log
+
+# local video originals (temp scratch dir; kept out of the repo)
+/test/
