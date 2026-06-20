@@ -1,65 +1,65 @@
-# Cosmic Zoom — Scroll-Driven WebGL Journey
+# web-showcase
 
-An immersive, scroll-driven experience that zooms outward across the scales of
-the cosmos — from **Earth → the Solar System → into the Milky Way → Sagittarius A\***
-**→ the full galaxy → the Observable Universe**.
+An interactive developer portfolio that opens on a live **globe.gl Earth** and
+lets you travel in two directions: **scroll out** through a "Powers of Ten"
+cosmic zoom to the observable universe, or **dive in** through a warp into a
+futuristic portfolio.
 
-This is the smooth-scrolling foundation of the portfolio showcase.
+Built with **Vite + React + TypeScript + React Three Fiber**. No backend, no
+secrets — static output, deployable to the Vercel free tier.
 
-## How it works
+## The experience
 
-A literal zoom across ~60 orders of magnitude breaks floating-point precision,
-so this uses the classic **"Powers of Ten" hand-off**: six self-contained scale
-"stages" that cross-fade and scale into/out of one another as the scroll offset
-advances, reading as one continuous zoom-out.
+- **Earth** ([`HomeEarth.tsx`](src/cosmos/HomeEarth.tsx)) — a globe.gl (three.js)
+  globe with a real-time, per-viewer day/night terminator + city lights, country
+  hover (outline + stats popup), and an atmosphere. Drag to orbit; scroll or
+  swipe to travel.
+- **Cosmos** ([`Experience.tsx`](src/cosmos/Experience.tsx)) — scroll out past the
+  globe and six cross-fading scale "stages" (Solar System → Milky Way →
+  Sagittarius A\* → galaxy → observable universe) hand off as one continuous
+  zoom. A literal zoom across ~60 orders of magnitude breaks float precision, so
+  this uses the classic **"Powers of Ten" hand-off** instead.
+- **Portfolio** ([`Portfolio.tsx`](src/portfolio/Portfolio.tsx)) — dive in (or use
+  the Enter Portfolio button) to a scroll-driven portfolio with a 3D
+  mouse/touch-tilt background, a particle constellation, a scroll-cosmos reveal,
+  and an infinite drag/swipe project carousel.
 
-- **Smooth scroll** — `drei` `ScrollControls` with damping drives a normalized
-  `0 → 1` scroll offset (no scroll-jacking; native scroll underneath).
-- **Stage hand-off** — [`Stage.tsx`](src/cosmos/Stage.tsx) maps that offset to
-  each scale's opacity + scale every frame (see `stageState` in
-  [`util.ts`](src/cosmos/util.ts)).
-- **Captions** — a DOM layer ([`Overlay.tsx`](src/cosmos/Overlay.tsx)) reads the
-  scroll offset through a lightweight module bridge and fades titles in/out.
-- **Glow** — `@react-three/postprocessing` Bloom + a subtle Vignette.
+Works with mouse, trackpad, and touch; honors `prefers-reduced-motion`.
 
 ## Tech stack
 
-| Concern        | Tool                                            |
-| -------------- | ----------------------------------------------- |
-| Build / dev    | **Vite** + **TypeScript**                       |
-| Rendering      | **React Three Fiber** (Three.js)                |
-| Helpers        | **@react-three/drei**                           |
-| Post FX        | **@react-three/postprocessing** (Bloom)         |
-| Smooth scroll  | drei `ScrollControls` (damped)                  |
+| Concern       | Tool                                                  |
+| ------------- | ----------------------------------------------------- |
+| Build / dev   | **Vite** + **TypeScript**                             |
+| Rendering     | **React Three Fiber** (Three.js) + **globe.gl**       |
+| Helpers / FX  | **@react-three/drei**, **@react-three/postprocessing**|
+| Smooth scroll | drei `ScrollControls` (cosmos) + **Lenis** (portfolio)|
 
 ## Scripts
 
 ```bash
+npm install
 npm run dev      # start the dev server
 npm run build    # typecheck + production build to dist/
-npm run preview  # preview the production build
+npm run preview  # preview the production build locally
 ```
 
-## Deploy (Vercel free tier)
+## Deploy (Vercel)
 
-Static output — no adapter needed. Either import the repo in the Vercel
-dashboard or run `vercel`. Build settings are auto-detected:
+Static SPA — no backend or environment variables required. Import the repo in the
+Vercel dashboard or run `vercel`. Settings are pinned in
+[`vercel.json`](vercel.json) and otherwise auto-detected:
 
+- **Framework:** Vite
 - **Build command:** `npm run build`
 - **Output directory:** `dist`
 
-## Notes
-
-- Honors `prefers-reduced-motion` (idle rotation/parallax disabled).
-- Earth, Moon, and surface textures live in `public/textures/` (NASA imagery via
-  the three.js examples).
-
 ## Credits
 
-- Planet + Sun surface maps in `public/textures/planets/` (Sun, Mercury, Venus,
-  Mars, Jupiter, Saturn + ring, Uranus, Neptune) are by
+- Planet + Sun surface maps in `public/textures/planets/` are by
   [Solar System Scope](https://www.solarsystemscope.com/textures/), licensed
-  **CC BY 4.0**, downscaled to 512px.
-- The Sagittarius A\* black hole shader and its Milky Way / accretion-disk
-  textures are adapted from
-  [threejs-blackhole](https://github.com/aaqibb13/threejs-blackhole) (Apache-2.0 / MIT).
+  **CC BY 4.0**, downscaled.
+- The Sagittarius A\* black-hole shader and accretion-disk textures are adapted
+  from [threejs-blackhole](https://github.com/aaqibb13/threejs-blackhole)
+  (Apache-2.0 / MIT).
+- Earth day / night textures are from the three.js examples (NASA imagery).
