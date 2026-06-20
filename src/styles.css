@@ -318,8 +318,8 @@ body {
 .city-caption {
   position: fixed;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  bottom: 13vh;
+  transform: translateX(-50%);
   width: min(620px, 86vw);
   z-index: 3;
   text-align: center;

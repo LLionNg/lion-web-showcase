@@ -47,7 +47,9 @@ export default function CityStage({
 
     const update = () => {
       const m = max();
-      const p = m > 0 ? scrollEl.scrollTop / m : 0;
+      // Invert: scrolling UP descends deeper into the city, so the zoom matches
+      // the globe's "scroll up = zoom in" direction (not inverted between them).
+      const p = m > 0 ? 1 - scrollEl.scrollTop / m : 0;
       scene?.setProgress(p); // the scene damps this internally
       if (caption) {
         const vis = Math.min(1, Math.max(0, 1 - Math.abs(p - 0.5) / 0.32));
@@ -59,21 +61,23 @@ export default function CityStage({
       overscroll = 0; // any in-range scroll cancels a pending hand-off
     };
 
-    // push past an end -> hand off (dir < 0 = up at the top -> Earth, dir > 0 =
-    // down at the bottom -> portfolio). Accumulated so it takes a deliberate push.
+    // Push past an end to hand off. With the inverted mapping scrollTop 0 is the
+    // streets (deepest) and scrollTop max is the sky (highest): keep scrolling UP
+    // at the streets -> portfolio; keep scrolling DOWN at the sky -> Earth.
+    // Accumulated so it takes a deliberate push, not a stray tick.
     const pushOut = (dir: number, amount: number, threshold: number) => {
       if (exited || !armed) return;
       if (dir < 0 && nearTop()) {
         overscroll += amount;
         if (overscroll > threshold) {
           exited = true;
-          exitEarthRef.current();
+          exitPortfolioRef.current();
         }
       } else if (dir > 0 && nearBottom()) {
         overscroll += amount;
         if (overscroll > threshold) {
           exited = true;
-          exitPortfolioRef.current();
+          exitEarthRef.current();
         }
       } else {
         overscroll = 0;
@@ -107,8 +111,9 @@ export default function CityStage({
       }
       setReady(true);
       window.addEventListener("resize", onResize);
-      // start at the entry end (top from Earth, bottom from the portfolio)
-      scrollEl.scrollTop = enterFrom === "portfolio" ? max() : 0;
+      // Earth enters at the sky (scrollTop max = progress 0); the portfolio
+      // enters at the streets (scrollTop 0 = progress 1).
+      scrollEl.scrollTop = enterFrom === "portfolio" ? 0 : max();
       update();
       window.setTimeout(() => {
         if (!cancelled) armed = true;
