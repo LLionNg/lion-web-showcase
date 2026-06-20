@@ -246,10 +246,12 @@
   display: inline-flex;
   align-items: center;
   padding: 12px 22px;
+  font-family: inherit;
   font-weight: 600;
   font-size: 0.92rem;
   color: var(--pf-text);
   text-decoration: none;
+  cursor: pointer;
   border: 1px solid rgba(150, 175, 255, 0.28);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);

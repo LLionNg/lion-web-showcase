@@ -86,6 +86,7 @@ export default function Portfolio({
   const scrollRef = useRef<HTMLDivElement>(null);
   const onReturnRef = useRef(onReturn);
   onReturnRef.current = onReturn;
+  const lenisRef = useRef<Lenis | null>(null);
 
   // 3D tilt: the background plane leans toward the pointer / finger (smoothed via
   // rAF). Transform string is set on the element directly (no CSS calc/var) so it
@@ -140,6 +141,7 @@ export default function Portfolio({
       smoothWheel: true,
       wheelMultiplier: 0.9,
     });
+    lenisRef.current = lenis;
 
     // land at the bottom (deep-zoom dive) or the top (Enter Portfolio button)
     let landed = false;
@@ -237,6 +239,7 @@ export default function Portfolio({
       wrapper.removeEventListener("touchstart", onTouchStart);
       wrapper.removeEventListener("touchmove", onTouchMove);
       lenis.destroy();
+      lenisRef.current = null;
     };
   }, [active, landTop]);
 
@@ -279,6 +282,12 @@ export default function Portfolio({
       </article>
     );
 
+  // Smooth-scroll to the Featured Work section via Lenis (no URL hash).
+  const scrollToWork = () => {
+    const target = scrollRef.current?.querySelector<HTMLElement>("#work");
+    if (target) lenisRef.current?.scrollTo(target, { offset: -24 });
+  };
+
   return (
     <section
       className={`portfolio ${active ? "portfolio--on" : ""}`}
@@ -307,9 +316,13 @@ export default function Portfolio({
               <p className="pf-role">{profile.title}</p>
               <p className="pf-tagline">{profile.tagline}</p>
               <div className="pf-cta">
-                <a className="pf-btn pf-btn--primary" href="#work">
+                <button
+                  type="button"
+                  className="pf-btn pf-btn--primary"
+                  onClick={scrollToWork}
+                >
                   View Work
-                </a>
+                </button>
                 <a
                   className="pf-btn"
                   href={profile.github}
