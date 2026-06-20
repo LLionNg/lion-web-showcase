@@ -20,6 +20,10 @@ const HANDOFF_OFFSET = 0.22;
 const HANDBACK_BELOW = 0.18;
 // Length of the "dive" warp into the portfolio — must match the CSS animation.
 const DIVE_MS = 1150;
+// Cosmos→Earth hand-back stays disarmed this long after entering the cosmos, so
+// the entry offset-damp (which passes through the hand-back zone) can't bounce
+// you straight back to Earth.
+const COSMOS_ENTRY_GUARD_MS = 1200;
 
 // On touch devices the cosmos shaders (especially the ray-marched black hole,
 // which runs per device pixel) are the scroll bottleneck, so cap the canvas DPR
@@ -48,12 +52,22 @@ export default function App() {
   // where the portfolio lands: top (Enter button) vs bottom (deep-zoom dive).
   const [portfolioTop, setPortfolioTop] = useState(false);
 
-  // Earth → cosmos: zoom-out past the full globe drops into the solar system.
-  const toCosmos = useCallback(() => {
+  // When we last entered the cosmos. Entering sets the scroll to the target
+  // offset, but the drei offset DAMPS up from wherever it was frozen (~0.06 after
+  // a previous return), passing through the hand-back zone (<= HANDBACK_BELOW) for
+  // ~1s. Without a guard, a stray wheel/touch fired the cosmos->Earth hand-back
+  // during that window and bounced straight back to Earth (the "fade out, fade
+  // back" bug). The hand-back stays disarmed for COSMOS_ENTRY_GUARD_MS after this.
+  const enteredCosmosRef = useRef(0);
+  const enterCosmos = useCallback((offset: number) => {
     const sc = scrollEl();
-    if (sc) sc.scrollTop = (sc.scrollHeight - sc.clientHeight) * HANDOFF_OFFSET;
+    if (sc) sc.scrollTop = (sc.scrollHeight - sc.clientHeight) * offset;
+    enteredCosmosRef.current = performance.now();
     setEarthActive(false);
   }, []);
+
+  // Earth → cosmos: zoom-out past the full globe drops into the solar system.
+  const toCosmos = useCallback(() => enterCosmos(HANDOFF_OFFSET), [enterCosmos]);
 
   // Earth → portfolio: warp flash, then reveal. The deep-zoom dive lands at the
   // bottom (toolbox); the Enter Portfolio button lands at the top (hero).
@@ -101,19 +115,18 @@ export default function App() {
         goEarth();
       } else {
         // cosmos: enter the cosmos if needed, then let drei damp to the anchor.
-        const sc = scrollEl();
-        if (sc)
-          sc.scrollTop = (sc.scrollHeight - sc.clientHeight) * target.offset;
-        setEarthActive(false);
+        enterCosmos(target.offset);
       }
     },
-    [diveToPortfolio, goEarth],
+    [diveToPortfolio, goEarth, enterCosmos],
   );
 
   // Cosmos → Earth: scrolling back up to the solar system returns to the globe.
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
       if (earthActive || inPortfolio || diving) return;
+      if (performance.now() - enteredCosmosRef.current < COSMOS_ENTRY_GUARD_MS)
+        return;
       if (e.deltaY < 0 && scrollState.offset <= HANDBACK_BELOW) goEarth();
     };
     window.addEventListener("wheel", onWheel, { passive: true });
@@ -125,6 +138,8 @@ export default function App() {
     };
     const onTouchEnd = (e: TouchEvent) => {
       if (earthActive || inPortfolio || diving) return;
+      if (performance.now() - enteredCosmosRef.current < COSMOS_ENTRY_GUARD_MS)
+        return;
       const dy = (e.changedTouches[0]?.clientY ?? 0) - ty;
       if (dy > 48 && scrollState.offset <= HANDBACK_BELOW) goEarth();
     };
