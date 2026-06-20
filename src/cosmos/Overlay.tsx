@@ -51,7 +51,6 @@ const CAPTIONS: Caption[] = [
 
 export default function Overlay() {
   const refs = useRef<(HTMLDivElement | null)[]>([]);
-  const hintRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,9 +65,6 @@ export default function Overlay() {
         // Gentle upward drift as each caption fades.
         el.style.transform = `translate(-50%, ${(1 - op) * 14}px)`;
       });
-      if (hintRef.current) {
-        hintRef.current.style.opacity = String(1 - clamp01(o * 14));
-      }
       if (barRef.current) {
         barRef.current.style.transform = `scaleX(${clamp01(o)})`;
       }
@@ -93,11 +89,6 @@ export default function Overlay() {
           <p className="caption__body">{c.body}</p>
         </div>
       ))}
-
-      <div className="hint" ref={hintRef}>
-        <span>scroll to travel</span>
-        <span className="hint__arrow">↓</span>
-      </div>
 
       <div className="progress">
         <div className="progress__bar" ref={barRef} />

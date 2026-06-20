@@ -1,10 +1,12 @@
-import { Suspense, lazy, useCallback, useEffect, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { ScrollControls } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
 import Experience from "./cosmos/Experience";
 import Overlay from "./cosmos/Overlay";
+import SceneNav from "./cosmos/SceneNav";
+import { SCENES } from "./cosmos/scenes";
 import { DBG } from "./cosmos/debug";
 import { scrollState } from "./cosmos/progress";
 import type { EarthPhase } from "./cosmos/HomeEarth";
@@ -61,16 +63,47 @@ export default function App() {
     setHomeSignal((s) => s + 1);
   }, []);
 
-  // Cosmos → Earth via the on-screen tab — tap to zoom back in to the globe
-  // without hunting for the swipe (matches the wheel/swipe hand-back).
-  const tabToEarth = useCallback(() => setEarthActive(true), []);
+  // Smooth zoom back to the globe: ease the cosmos down past the Solar System
+  // first, then fade the globe in — so it never pops in over a distant scene
+  // (the old bug where tapping "Earth" overlaid the globe on the galaxy etc.).
+  const goingEarthRef = useRef(false);
+  const goEarth = useCallback(() => {
+    if (goingEarthRef.current) return;
+    goingEarthRef.current = true;
+    const sc = scrollEl();
+    if (sc) sc.scrollTop = (sc.scrollHeight - sc.clientHeight) * 0.06;
+    window.setTimeout(() => {
+      setEarthActive(true);
+      setHomeSignal((s) => s + 1);
+      goingEarthRef.current = false;
+    }, 650);
+  }, []);
+
+  // Scene nav: smooth-scroll / hand off to an adjacent scene by id.
+  const navigate = useCallback(
+    (id: string) => {
+      const target = SCENES.find((s) => s.id === id);
+      if (!target) return;
+      if (target.kind === "portfolio") {
+        diveToPortfolio(true);
+      } else if (target.kind === "earth") {
+        goEarth();
+      } else {
+        // cosmos: enter the cosmos if needed, then let drei damp to the anchor.
+        const sc = scrollEl();
+        if (sc)
+          sc.scrollTop = (sc.scrollHeight - sc.clientHeight) * target.offset;
+        setEarthActive(false);
+      }
+    },
+    [diveToPortfolio, goEarth],
+  );
 
   // Cosmos → Earth: scrolling back up to the solar system returns to the globe.
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
       if (earthActive || inPortfolio || diving) return;
-      if (e.deltaY < 0 && scrollState.offset <= HANDBACK_BELOW)
-        setEarthActive(true);
+      if (e.deltaY < 0 && scrollState.offset <= HANDBACK_BELOW) goEarth();
     };
     window.addEventListener("wheel", onWheel, { passive: true });
     // Touch equivalent (no wheel on mobile): a swipe DOWN at the top of the
@@ -82,7 +115,7 @@ export default function App() {
     const onTouchEnd = (e: TouchEvent) => {
       if (earthActive || inPortfolio || diving) return;
       const dy = (e.changedTouches[0]?.clientY ?? 0) - ty;
-      if (dy > 48 && scrollState.offset <= HANDBACK_BELOW) setEarthActive(true);
+      if (dy > 48 && scrollState.offset <= HANDBACK_BELOW) goEarth();
     };
     window.addEventListener("touchstart", onTouchStart, { passive: true });
     window.addEventListener("touchend", onTouchEnd, { passive: true });
@@ -91,7 +124,7 @@ export default function App() {
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchend", onTouchEnd);
     };
-  }, [earthActive, inPortfolio, diving]);
+  }, [earthActive, inPortfolio, diving, goEarth]);
 
   const earthPhase: EarthPhase = inPortfolio
     ? "hidden"
@@ -161,29 +194,14 @@ export default function App() {
         </button>
       )}
 
-      {/* Scene tabs: tap to step between adjacent scenes instead of swiping
-          (the touch slide was finicky on phones). Blended into the scene at the
-          edge you'd travel toward — bottom = zoom out, top = zoom back in. */}
-      {earthPhase === "active" && (
-        <button
-          className="scene-tab scene-tab--bottom"
-          onClick={toCosmos}
-          title="Drift out to the Solar System"
-        >
-          <span className="scene-tab__label">Solar System</span>
-          <span className="scene-tab__chev">↓</span>
-        </button>
-      )}
-      {earthPhase === "faded" && (
-        <button
-          className="scene-tab scene-tab--top"
-          onClick={tabToEarth}
-          title="Zoom back in to Earth"
-        >
-          <span className="scene-tab__chev">↑</span>
-          <span className="scene-tab__label">Earth</span>
-        </button>
-      )}
+      {/* Dynamic scene nav: tap the full-width strip at the top (zoom in) or
+          bottom (zoom out) to smooth-scroll to the adjacent scene. Shown across
+          Earth + the cosmos, hidden during the warp and inside the portfolio. */}
+      <SceneNav
+        active={!inPortfolio && !diving}
+        earthActive={earthActive}
+        onNavigate={navigate}
+      />
 
       {diving && <div className="warp-flash on" aria-hidden="true" />}
 
