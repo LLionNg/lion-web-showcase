@@ -265,9 +265,14 @@ export default function HomeEarth({
         diveRef.current(); // swipe down -> dive into the portfolio
       }
     };
-    // On a touch-primary device, one-finger orbit is what spun the globe into
-    // the dark side, so turn it off (pinch-zoom still works).
-    if (isTouch) controls.enableRotate = false;
+    // On touch, fully disable OrbitControls. Its pointer capture was swallowing
+    // the vertical swipe and the scene-nav tap on iOS — the gesture fired
+    // touchcancel / pointercancel instead of end/up, so neither hand-off
+    // completed and the globe felt "stuck". One-finger orbit + pan were already
+    // off and the journey navigates purely by swipe/tap, so the controls aren't
+    // needed; the fly-back (pointOfView) still works without them. (Trade-off:
+    // pinch-zoom on the globe is dropped on touch.)
+    if (isTouch) controls.enabled = false;
     // Attach the swipe handlers always: touch events only fire from real touch
     // input (a no-op for a mouse), so this is safe on every device.
     el.addEventListener("touchstart", onTouchStart, { passive: true });
