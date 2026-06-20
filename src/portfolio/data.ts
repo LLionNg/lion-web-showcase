@@ -55,6 +55,33 @@ export type Project = {
 
 export const projects: Project[] = [
   {
+    id: "weapon-detection",
+    title: "Weapon Detection",
+    blurb:
+      "Real-time firearm and knife detection for live CCTV and RTSP streams, pairing a YOLO11 detector with EDSR super-resolution so low-resolution surveillance footage still yields usable detections. Backed by a reproducible pipeline that unifies 12 public datasets (~16,600 images) into YOLO format, with FP16/TensorRT acceleration and per-camera alert cooldowns.",
+    tags: ["YOLO11", "TensorRT", "Super-Resolution", "Computer Vision"],
+    year: "2026",
+    featured: true,
+  },
+  {
+    id: "efficient-chess-ai",
+    title: "FIDE & Google Efficient Chess AI",
+    blurb:
+      "A chess engine built from scratch for the FIDE & Google Efficient Chess AI challenge on a custom pure-Python bitboard core. Implements and benchmarks four search strategies - negamax with alpha-beta and quiescence, minimax, and Monte Carlo Tree Search - tuned to play strong moves within tight per-move compute budgets.",
+    tags: ["Bitboards", "Alpha-Beta", "MCTS", "Game AI"],
+    year: "2025",
+    featured: true,
+  },
+  {
+    id: "face-recognition-webapp",
+    title: "Face Recognition WebApp",
+    blurb:
+      "A full-stack app that identifies enrolled people in real time from a webcam feed. A two-stage pipeline detects faces with MTCNN and classifies them with a fine-tuned FaceNet model, served by a FastAPI backend and a Next.js UI that overlays live bounding boxes and identities - shipped end to end with its own PyTorch training pipeline.",
+    tags: ["FaceNet", "MTCNN", "PyTorch", "FastAPI", "Next.js"],
+    year: "2025",
+    featured: true,
+  },
+  {
     id: "webgl-portfolio",
     title: "Interactive 3D Portfolio (WebGL)",
     blurb:
@@ -97,6 +124,38 @@ export const projects: Project[] = [
       href: "https://lablab.ai/u/@tomu1572380/cm0fgsj3o004wxpstcmeod6h1",
     },
     featured: true,
+  },
+  {
+    id: "check-maid",
+    title: "Check Maid",
+    blurb:
+      "A geofenced check-in/out and payroll system for housekeeping staff, operated entirely through a LINE bot that captures GPS location and timestamps and auto-splits hours into regular and overtime. Built on an async FastAPI + PostgreSQL backend with Alembic migrations and a Next.js admin dashboard.",
+    tags: ["FastAPI", "PostgreSQL", "LINE Bot", "Next.js"],
+    year: "2026",
+  },
+  {
+    id: "cashier-fraud-detection",
+    title: "Cashier Fraud Detection",
+    blurb:
+      "A computer-vision pipeline that flags potential register fraud by detecting whether a cash drawer is open or closed in surveillance video and timing how long it stays open. A YOLO detector trained on a Roboflow dataset (mAP50 ~0.98) runs frame by frame to surface suspicious drawer-open events.",
+    tags: ["YOLO", "Object Detection", "Computer Vision"],
+    year: "2026",
+  },
+  {
+    id: "openclaw-telegram",
+    title: "OpenClaw Telegram",
+    blurb:
+      "A Thai-language Telegram assistant that turns team chat into structured to-do lists and chases task status. It pulls a LINE group's history, extracts action items with Gemini 2.5 Flash, and posts a daily Thai summary back to Telegram, with a document-reading skill that parses Excel, PDF, and DOCX into JSON.",
+    tags: ["Telegram", "Gemini", "LLM Agent", "Automation"],
+    year: "2026",
+  },
+  {
+    id: "twilio-voice-capture",
+    title: "Twilio Voice Capture",
+    blurb:
+      "A FastAPI WebSocket gateway that captures live call audio per session, relays it to a real-time speech-to-text service, and persists recordings - built for Thai-language telephony voice capture with a clean session-managed relay architecture.",
+    tags: ["FastAPI", "WebSockets", "Speech-to-Text", "Telephony"],
+    year: "2026",
   },
   {
     id: "thai-image-captioning",
