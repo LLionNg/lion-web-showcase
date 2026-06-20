@@ -373,12 +373,6 @@
 }
 
 /* ---- project cards ---- */
-.pf-cards {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 18px;
-}
-.pf-cards--compact { grid-template-columns: repeat(3, 1fr); }
 .pf-card {
   position: relative;
   padding: 24px;
@@ -722,8 +716,6 @@
 }
 @media (max-width: 760px) {
   .pf-stats { grid-template-columns: 1fr; }
-  .pf-cards,
-  .pf-cards--compact,
   .pf-skills { grid-template-columns: 1fr; }
   .pf-portrait { width: min(66%, 260px); }
   .pf-contact__title { white-space: normal; }

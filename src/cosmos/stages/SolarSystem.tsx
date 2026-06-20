@@ -38,8 +38,6 @@ export default function SolarSystem({
   end: number;
 }) {
   const scroll = useScroll();
-  // Seamless corona: a bright tight core glow + a wide, very faint halo, both
-  // with smooth multi-stop falloffs so there's no visible edge.
   const maps = useTexture(PLANETS.map((p) => p.tex));
   const sunTex = useTexture("/textures/planets/sun.jpg");
   const ringTex = useTexture("/textures/planets/saturn_ring.png");
@@ -106,7 +104,6 @@ export default function SolarSystem({
 
         {PLANETS.map((p, i) => (
           <group key={p.name}>
-            {/* Orbit ring */}
             <mesh rotation={[-Math.PI / 2, 0, 0]}>
               <ringGeometry args={[p.r - 0.004, p.r + 0.004, 200]} />
               <meshBasicMaterial
@@ -118,7 +115,6 @@ export default function SolarSystem({
               />
             </mesh>
 
-            {/* Orbiting planet */}
             <group
               ref={(el) => {
                 orbitRefs.current[i] = el;

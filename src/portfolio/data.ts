@@ -1,5 +1,4 @@
-// Portfolio content, seeded from the CV. This is the single source of truth for
-// the placeholder site - swap/extend freely as real project write-ups land.
+// Portfolio content, seeded from the CV. Single source of truth for the site.
 
 export const profile = {
   name: "Suphakit Ng",
@@ -18,7 +17,6 @@ export const profile = {
     gpa: "3.25 / 4.00",
     year: "2025",
   },
-  // profile portrait, integrated into the hero
   avatar: "/portfolio/main.jpg",
 };
 
