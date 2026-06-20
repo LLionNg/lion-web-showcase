@@ -61,6 +61,10 @@ export default function App() {
     setHomeSignal((s) => s + 1);
   }, []);
 
+  // Cosmos → Earth via the on-screen tab — tap to zoom back in to the globe
+  // without hunting for the swipe (matches the wheel/swipe hand-back).
+  const tabToEarth = useCallback(() => setEarthActive(true), []);
+
   // Cosmos → Earth: scrolling back up to the solar system returns to the globe.
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
@@ -154,6 +158,30 @@ export default function App() {
           title="Go straight to the top of the portfolio"
         >
           Enter Portfolio
+        </button>
+      )}
+
+      {/* Scene tabs: tap to step between adjacent scenes instead of swiping
+          (the touch slide was finicky on phones). Blended into the scene at the
+          edge you'd travel toward — bottom = zoom out, top = zoom back in. */}
+      {earthPhase === "active" && (
+        <button
+          className="scene-tab scene-tab--bottom"
+          onClick={toCosmos}
+          title="Drift out to the Solar System"
+        >
+          <span className="scene-tab__label">Solar System</span>
+          <span className="scene-tab__chev">↓</span>
+        </button>
+      )}
+      {earthPhase === "faded" && (
+        <button
+          className="scene-tab scene-tab--top"
+          onClick={tabToEarth}
+          title="Zoom back in to Earth"
+        >
+          <span className="scene-tab__chev">↑</span>
+          <span className="scene-tab__label">Earth</span>
         </button>
       )}
 

@@ -276,3 +276,71 @@ body {
   box-shadow: 0 0 26px rgba(110, 168, 255, 0.4);
   transform: translateY(-1px);
 }
+
+/* ---- Scene tabs: tap to step to the adjacent scene (no swipe needed) ----
+   Blended pills at the edge you travel toward: bottom = zoom out to the cosmos,
+   top = zoom back in to Earth. A bobbing chevron hints the direction. Sized as a
+   comfortable touch target so phones don't depend on the finicky swipe. */
+.scene-tab {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12; /* above the caption overlay (10), below the portfolio (20) */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.2rem;
+  font: 600 0.66rem/1 "Inter", system-ui, sans-serif;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--fg);
+  background: rgba(110, 168, 255, 0.08);
+  border: 1px solid rgba(110, 168, 255, 0.26);
+  border-radius: 14px;
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  opacity: 0.8;
+  transition:
+    opacity 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.scene-tab:hover {
+  opacity: 1;
+  background: rgba(110, 168, 255, 0.16);
+  box-shadow: 0 0 24px rgba(110, 168, 255, 0.32);
+}
+.scene-tab--bottom {
+  bottom: 4.5vh;
+}
+.scene-tab--top {
+  top: 3vh;
+}
+.scene-tab__chev {
+  font-size: 1.05rem;
+  line-height: 0.5;
+  color: var(--accent);
+}
+.scene-tab--bottom .scene-tab__chev {
+  animation: bob 1.8s ease-in-out infinite;
+}
+.scene-tab--top .scene-tab__chev {
+  animation: bobUp 1.8s ease-in-out infinite;
+}
+@keyframes bobUp {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene-tab__chev {
+    animation: none;
+  }
+}
