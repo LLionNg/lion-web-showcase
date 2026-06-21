@@ -465,7 +465,7 @@ export default function Portfolio({
               Let's explore the unknown across a boundless sea of stars.
             </h2>
             <div className="pf-cta">
-              <a className="pf-btn pf-btn--primary" href={`mailto:${profile.email}`}>
+              <a className="pf-btn" href={`mailto:${profile.email}`}>
                 {profile.email}
               </a>
               <a
