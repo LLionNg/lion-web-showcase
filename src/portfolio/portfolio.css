@@ -817,50 +817,41 @@
   100% { opacity: 0; transform: scale(2.6); }
 }
 
-/* ---- hero name filled with a looping video ----
-   The glyph interiors are a window onto the video; a white stroke keeps the
-   letters legible on the dark gradient. One SVG <text> drives both the clip
-   (fill) and the stroke (outline) so they stay pixel-aligned; no viewBox means
-   the font-size is real px and matches the rest of the hero type. A real <h1>
-   is kept (visually hidden) for SEO / a11y. */
+/* ---- hero name filled with a looping video (iOS-safe canvas composite) ----
+   The glyph interiors show the video; a white stroke keeps the letters legible
+   on the dark gradient. A hidden muted <video> is the decode source; each frame
+   is drawn into a <canvas> and clipped to the glyphs THERE - canvas 2D
+   compositing works on iOS Safari, unlike SVG clip-path / CSS masks applied to a
+   <video> layer (those leak the full video rectangle on real iPhones). The real
+   <h1> sits on top: transparent fill (so the canvas shows through the letters) +
+   a white text-stroke (the outline), and stays selectable text for SEO / a11y. */
 .pf-name-video {
   position: relative;
+  display: inline-block;
 }
-.pf-name-sr {
+.pf-name--video {
+  margin: 0;
+  position: relative;
+  z-index: 2; /* outline drawn on top of the canvas fill */
+  background: none; /* drop the base .pf-name gradient */
+  -webkit-text-fill-color: transparent; /* hollow letters -> canvas shows through */
+  color: transparent;
+  -webkit-text-stroke: 1.5px #ffffff;
+  white-space: nowrap; /* single line, so the canvas text mask lines up */
+}
+.pf-name-canvas {
   position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  pointer-events: none;
 }
-.pf-name-svg {
-  display: block;
-  width: 100%;
-  height: calc(clamp(2.6rem, 7vw, 5rem) * 1.22);
-  overflow: visible;
-}
-.pf-name-glyphs {
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  font-weight: 800;
-  font-size: clamp(2.6rem, 7vw, 5rem);
-  letter-spacing: -0.03em;
-}
-.pf-name-fo,
-.pf-name-vid {
+.pf-name-srcvid {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-}
-.pf-name-vid {
-  display: block;
-  object-fit: cover;
-}
-.pf-name-stroke {
-  fill: none;
-  stroke: #ffffff;
-  stroke-width: 1.5px;
-  paint-order: stroke;
+  opacity: 0; /* hidden decode source; NOT display:none so iOS still autoplays */
+  z-index: 0;
+  pointer-events: none;
 }
