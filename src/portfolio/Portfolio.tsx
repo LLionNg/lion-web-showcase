@@ -324,7 +324,7 @@ export default function Portfolio({
               <p className="pf-kicker">
                 <span className="pf-dot" /> arrived | {profile.handle.toLowerCase()}.exe
               </p>
-              <VideoName name={profile.name} src="/portfolio/name.mp4" />
+              <VideoName name={profile.name} src="/portfolio/name.mp4" active={active} />
               <p className="pf-role">{profile.title}</p>
               <p className="pf-tagline">{profile.tagline}</p>
               <div className="pf-cta">
