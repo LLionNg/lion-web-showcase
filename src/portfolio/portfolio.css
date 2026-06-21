@@ -838,6 +838,11 @@
   color: transparent;
   -webkit-text-stroke: 1.5px #ffffff;
   white-space: nowrap; /* single line, so the canvas text mask lines up */
+  /* Normal spacing on BOTH the outline and the canvas mask: the mask relied on
+     canvas ctx.letterSpacing to match the base -0.03em, but that's a no-op on
+     older iOS Safari, so the video fill drifted off the outline. Forcing normal
+     here (the canvas reads this value, so it stays in sync everywhere). */
+  letter-spacing: normal;
 }
 .pf-name-canvas {
   position: absolute;
