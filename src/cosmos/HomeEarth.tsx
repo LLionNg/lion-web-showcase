@@ -5,6 +5,7 @@ import CountryPopup, {
   type PopupHandle,
   type CountryStats,
 } from "./CountryPopup";
+import { userLatLng } from "./timezoneLocation";
 
 /**
  * Homepage opening "Earth": a WebGL globe (globe.gl / three.js) with a real-time
@@ -20,6 +21,10 @@ import CountryPopup, {
 
 const DAY_TEX = "/textures/earth_atmos_2048.jpg";
 const NIGHT_TEX = "/textures/earth_blackmarble.jpg";
+
+// Orient the globe so it faces the visitor's country (from their timezone) when
+// Earth appears, instead of a fixed mid-Atlantic view. Computed once per load.
+const HOME = userLatLng();
 
 // POV altitude is in globe-radius units. Default framed view ~2.5.
 const START_ALT = 2.5;
@@ -223,7 +228,7 @@ export default function HomeEarth({
     controls.minDistance = GLOBE_R * 1.05;
     controls.maxDistance = GLOBE_R * (1 + MAX_ALT + 0.5);
     controls.enablePan = false;
-    world.pointOfView({ lat: 12, lng: -40, altitude: START_ALT });
+    world.pointOfView({ lat: HOME.lat, lng: HOME.lng, altitude: START_ALT });
 
     const onWheel = (e: WheelEvent) => {
       const alt = world.pointOfView().altitude ?? START_ALT;
@@ -315,7 +320,7 @@ export default function HomeEarth({
   useEffect(() => {
     const world = globeRef.current;
     if (!world || !homeSignal) return;
-    world.pointOfView({ lat: 12, lng: -40, altitude: START_ALT }, 1600);
+    world.pointOfView({ lat: HOME.lat, lng: HOME.lng, altitude: START_ALT }, 1600);
   }, [homeSignal]);
 
   return (
