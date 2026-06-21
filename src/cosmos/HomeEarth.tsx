@@ -21,6 +21,11 @@ import { userLatLng } from "./timezoneLocation";
 
 const DAY_TEX = "/textures/earth_atmos_2048.jpg";
 const NIGHT_TEX = "/textures/earth_blackmarble.jpg";
+// Smaller equirect maps for touch: the full night map is 3600x1800 (~26 MB
+// decoded) and was a big part of why the globe was slow to appear / unstable on
+// iOS. 1024x512 is plenty at a globe's on-screen size.
+const DAY_TEX_LO = "/textures/earth_atmos_1024.jpg";
+const NIGHT_TEX_LO = "/textures/earth_blackmarble_1024.jpg";
 
 // Orient the globe so it faces the visitor's country (from their timezone) when
 // Earth appears, instead of a fixed mid-Atlantic view. Computed once per load.
@@ -108,9 +113,12 @@ export default function HomeEarth({
       .atmosphereAltitude(0.2);
     globeRef.current = world;
     // Cap the pixel ratio: the day/night + atmosphere are full-screen shaders,
-    // so 2x DPI quadruples their per-pixel cost. 1.5x stays crisp while keeping
-    // the globe light enough that the cosmos -> Earth hand-off stays smooth.
-    world.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    // so 2x DPI quadruples their per-pixel cost. Desktop uses 1.5x; on touch we
+    // drop to 1x - the globe shares the GPU with the cosmos context there and the
+    // extra pixels were part of what made iOS Safari run out of memory.
+    world
+      .renderer()
+      .setPixelRatio(Math.min(window.devicePixelRatio || 1, isTouch ? 1 : 1.5));
     if (import.meta.env.DEV)
       (window as unknown as { __globe?: GlobeInstance }).__globe = world;
 
@@ -122,8 +130,8 @@ export default function HomeEarth({
     const loader = new THREE.TextureLoader();
     const material = new THREE.ShaderMaterial({
       uniforms: {
-        dayTexture: { value: loader.load(DAY_TEX) },
-        nightTexture: { value: loader.load(NIGHT_TEX) },
+        dayTexture: { value: loader.load(isTouch ? DAY_TEX_LO : DAY_TEX) },
+        nightTexture: { value: loader.load(isTouch ? NIGHT_TEX_LO : NIGHT_TEX) },
         sunLatLng: { value: new THREE.Vector2(0, 0) },
       },
       vertexShader: `

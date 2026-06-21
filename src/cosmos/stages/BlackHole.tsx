@@ -20,6 +20,17 @@ const vertexShader = /* glsl */ `
 // Ray-march quality (step size / max steps). Lower NSTEPS = faster.
 const defines = `#define STEP 0.1\n#define NSTEPS 300\n`;
 
+// Smaller lensed background on touch: the full Milky Way is 4096x2048 (~34 MB
+// decoded) - too much to hold alongside the globe's WebGL context on iOS, where
+// it contributed to the tab being killed. The bg is heavily lensed anyway.
+const IS_TOUCH =
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(pointer: coarse)").matches;
+const MILKYWAY_TEX = IS_TOUCH
+  ? "/textures/milkyway_2048.jpg"
+  : "/textures/milkyway.jpg";
+
 export default function BlackHole({
   start,
   end,
@@ -29,7 +40,7 @@ export default function BlackHole({
 }) {
   const scroll = useScroll();
   const [bg, star, disk] = useTexture([
-    "/textures/milkyway.jpg",
+    MILKYWAY_TEX,
     "/textures/star_noise.png",
     "/textures/accretion_disk.png",
   ]);

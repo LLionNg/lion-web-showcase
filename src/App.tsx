@@ -26,16 +26,18 @@ const DIVE_MS = 1150;
 // you straight back to Earth.
 const COSMOS_ENTRY_GUARD_MS = 1200;
 
-// On touch devices the cosmos shaders (especially the ray-marched black hole,
-// which runs per device pixel) are the scroll bottleneck, so cap the canvas DPR
-// there: 1.5x stays clean over mostly-dark space and cuts the per-pixel fragment
-// cost ~40% vs 2x. Desktop keeps full 2x. Matches the globe's cap.
-const COSMOS_DPR_MAX =
+// Touch-primary device (phone / tablet)? Detected once. iOS Safari runs the
+// cosmos AND the globe.gl Earth as two separate WebGL contexts, with the cosmos
+// per-pixel shaders (the ray-marched black hole) on top - on a real iPhone that
+// dual load exhausts WebKit's tight GPU/memory budget and the tab is killed over
+// time ("a problem repeatedly occurred"). So on touch the cosmos renders at
+// DPR 1 with no MSAA: each halving of pixels is a big cut to both fragment cost
+// and framebuffer memory. Desktop is unchanged (full 2x + MSAA).
+const IS_TOUCH =
   typeof window !== "undefined" &&
   typeof window.matchMedia === "function" &&
-  window.matchMedia("(pointer: coarse)").matches
-    ? 1.5
-    : 2;
+  window.matchMedia("(pointer: coarse)").matches;
+const COSMOS_DPR_MAX = IS_TOUCH ? 1 : 2;
 
 const scrollEl = () =>
   [...document.querySelectorAll("div")].find(
@@ -165,17 +167,18 @@ export default function App() {
     <div className="app">
       <Canvas
         className="canvas"
-        // Render the cosmos only when it's the active view. When the globe (or
-        // portfolio) is up the cosmos is hidden behind it, so freezing it means
-        // each Earth<->cosmos crossfade renders a single WebGL canvas (globe live
-        // + cosmos frozen, or cosmos live + globe paused) instead of both at once
-        // - which is what stuttered the hand-off.
-        frameloop={earthActive ? "never" : "always"}
+        // Render the cosmos ONLY when it's actually the visible view - frozen
+        // whenever the globe OR the portfolio is up (both sit opaque in front of
+        // it). Previously it stayed live behind the portfolio if you dove in from
+        // the cosmos, burning GPU on the heavy shaders behind something you can't
+        // see. Freezing also means only one WebGL canvas is live at a time, which
+        // the crossfade needs and iOS needs for stability.
+        frameloop={!earthActive && !inPortfolio && !diving ? "always" : "never"}
         camera={{ position: [0, 0, 6], fov: 50, near: 0.3, far: 150 }}
         dpr={[1, COSMOS_DPR_MAX]}
         gl={{
-          antialias: true,
-          powerPreference: "high-performance",
+          antialias: !IS_TOUCH,
+          powerPreference: IS_TOUCH ? "default" : "high-performance",
           toneMapping: THREE.ACESFilmicToneMapping,
         }}
       >
