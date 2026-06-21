@@ -77,13 +77,18 @@ export default function VideoName({
       mctx.textBaseline = "middle";
       mctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
       mctx.fillStyle = "#fff";
-      const ls = parseFloat(cs.letterSpacing) || 0;
-      const by = (parseFloat(cs.lineHeight) || h) / 2;
-      let x = 0;
-      for (const ch of name) {
-        mctx.fillText(ch, x, by);
-        x += mctx.measureText(ch).width + ls;
+      // Lay the text out the SAME way CSS does: one fillText using the browser's
+      // native layout (kerning) + the <h1>'s own letter-spacing. Drawing letter-
+      // by-letter drifted from CSS (manual advance ignores kerning), which showed
+      // as a doubled outline on some glyphs - worse at high mobile pixel density.
+      try {
+        mctx.letterSpacing =
+          cs.letterSpacing === "normal" ? "0px" : cs.letterSpacing;
+      } catch {
+        /* canvas letterSpacing unsupported on very old Safari; falls back to 0 */
       }
+      const by = (parseFloat(cs.lineHeight) || h) / 2;
+      mctx.fillText(name, 0, by);
     };
 
     // one composited frame: video "cover", then keep only the glyph shapes
