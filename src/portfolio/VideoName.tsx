@@ -4,23 +4,17 @@ import { useEffect, useRef } from "react";
  * Hero name whose glyph interiors show a looping video, with a white stroke
  * outline so the letters stay legible on the dark gradient.
  *
- * iOS Safari renders <video> (and SVG <foreignObject>) in a separate hardware
- * layer that ignores SVG clip-path / CSS masks, so the earlier SVG-clip version
- * showed the full video rectangle on real iPhones. This version composites in a
- * <canvas> instead - plain canvas 2D works identically across every browser:
- *   - a hidden, muted, autoplaying <video> is the decode source,
- *   - each frame is drawn "cover" into the canvas, then clipped to the glyphs
- *     with a single `destination-in` drawImage of a pre-built text-shape mask,
- *   - a real <h1> sits on top with a transparent fill (so the canvas shows
- *     through the letters) and a white -webkit-text-stroke (the outline). It also
- *     keeps the name as real, selectable text for SEO / a11y.
+ * BOTH the video fill and the white outline are drawn in the SAME <canvas> from
+ * the same text calls, so they are always pixel-aligned. The earlier version
+ * drew the outline as the <h1>'s CSS -webkit-text-stroke, which is a different
+ * renderer than the canvas fill and diverged on iOS (the fill "overshot" the
+ * outline). Canvas 2D also sidesteps iOS Safari ignoring SVG clip-path / CSS
+ * masks applied to a <video> layer.
  *
- * The text mask is rendered ONCE (per size) to an offscreen canvas in source-
- * over so the letters ACCUMULATE - `destination-in` is intersective, so masking
- * letter-by-letter would cancel them out (non-overlapping glyphs -> empty). It's
- * built from the <h1>'s computed font/size/line-height/letter-spacing, so fill
- * and outline line up at every clamp() size. Drawing pauses when the overlay is
- * inactive or the tab is hidden; prefers-reduced-motion paints one static frame.
+ * A hidden muted autoplaying <video> is the decode source. Per frame: draw the
+ * frame "cover", clip it to the glyphs with a pre-built `destination-in` text
+ * mask, then strokeText the outline on top. The real <h1> stays (transparent, on
+ * top) for layout sizing + selectable SEO text; it no longer paints anything.
  */
 export default function VideoName({
   name,
@@ -51,13 +45,26 @@ export default function VideoName({
       typeof window.matchMedia === "function" &&
       window.matchMedia("(pointer: coarse)").matches;
 
-    // Offscreen text-shape mask (device-px). Rebuilt on resize, reused per frame.
     const mask = document.createElement("canvas");
     const mctx = mask.getContext("2d");
 
     let w = 1;
     let h = 1;
     let dpr = 1;
+    let fontStr = "";
+    let lsStr = "0px";
+    let by = 0;
+
+    const applyText = (c: CanvasRenderingContext2D) => {
+      c.font = fontStr;
+      c.textBaseline = "middle";
+      try {
+        c.letterSpacing = lsStr;
+      } catch {
+        /* canvas letterSpacing is a no-op on older Safari - fine, both the mask
+           and the stroke below get the same treatment, so they stay aligned */
+      }
+    };
 
     const measure = () => {
       const cs = getComputedStyle(h1);
@@ -71,27 +78,17 @@ export default function VideoName({
       canvas.style.height = `${h}px`;
       mask.width = canvas.width;
       mask.height = canvas.height;
+      fontStr = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      lsStr = cs.letterSpacing === "normal" ? "0px" : cs.letterSpacing;
+      by = (parseFloat(cs.lineHeight) || h) / 2;
       if (!mctx) return;
       mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       mctx.clearRect(0, 0, w, h);
-      mctx.textBaseline = "middle";
-      mctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      applyText(mctx);
       mctx.fillStyle = "#fff";
-      // Lay the text out the SAME way CSS does: one fillText using the browser's
-      // native layout (kerning) + the <h1>'s own letter-spacing. Drawing letter-
-      // by-letter drifted from CSS (manual advance ignores kerning), which showed
-      // as a doubled outline on some glyphs - worse at high mobile pixel density.
-      try {
-        mctx.letterSpacing =
-          cs.letterSpacing === "normal" ? "0px" : cs.letterSpacing;
-      } catch {
-        /* canvas letterSpacing unsupported on very old Safari; falls back to 0 */
-      }
-      const by = (parseFloat(cs.lineHeight) || h) / 2;
       mctx.fillText(name, 0, by);
     };
 
-    // one composited frame: video "cover", then keep only the glyph shapes
     const stamp = () => {
       const vw = video.videoWidth;
       const vh = video.videoHeight;
@@ -103,10 +100,18 @@ export default function VideoName({
       const dw = vw * scale;
       const dh = vh * scale;
       ctx.drawImage(video, (w - dw) / 2, (h - dh) / 2, dw, dh);
+      // keep only the glyph shapes
       ctx.globalCompositeOperation = "destination-in";
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // mask is device-px; draw it 1:1
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(mask, 0, 0);
+      // white outline drawn from the SAME text call -> can't drift from the fill
       ctx.globalCompositeOperation = "source-over";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      applyText(ctx);
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#ffffff";
+      ctx.strokeText(name, 0, by);
     };
 
     let raf = 0;

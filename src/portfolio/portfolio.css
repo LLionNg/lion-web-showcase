@@ -834,9 +834,9 @@
   position: relative;
   z-index: 2; /* outline drawn on top of the canvas fill */
   background: none; /* drop the base .pf-name gradient */
-  -webkit-text-fill-color: transparent; /* hollow letters -> canvas shows through */
+  -webkit-text-fill-color: transparent; /* invisible: the canvas paints fill +
+     outline; this <h1> is just layout + selectable SEO text on top */
   color: transparent;
-  -webkit-text-stroke: 1.5px #ffffff;
   white-space: nowrap; /* single line, so the canvas text mask lines up */
   /* Normal spacing on BOTH the outline and the canvas mask: the mask relied on
      canvas ctx.letterSpacing to match the base -0.03em, but that's a no-op on
