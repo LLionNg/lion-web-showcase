@@ -47,13 +47,16 @@ const scrollEl = () =>
 export default function App() {
   // earthActive: interactive globe.gl earth (true) vs R3F cosmic zoom (false).
   const [earthActive, setEarthActive] = useState(true);
-  // the portfolio "world" you dive into at the bottom of the zoom.
-  const [inPortfolio, setInPortfolio] = useState(DBG.portfolio);
+  // the portfolio "world" you dive into at the bottom of the zoom. Touch devices
+  // (phones/tablets) START here so they skip landing on the heavy Earth/cosmos
+  // render - the globe stays mounted + reachable via Return to orbit / scroll-out.
+  const [inPortfolio, setInPortfolio] = useState(DBG.portfolio || IS_TOUCH);
   const [diving, setDiving] = useState(false);
   // bumped on return-to-orbit so the globe flies back out.
   const [homeSignal, setHomeSignal] = useState(0);
   // where the portfolio lands: top (Enter button) vs bottom (deep-zoom dive).
-  const [portfolioTop, setPortfolioTop] = useState(false);
+  // Touch starts at the top (hero) since there was no dive.
+  const [portfolioTop, setPortfolioTop] = useState(IS_TOUCH);
 
   // When we last entered the cosmos. Entering sets the scroll to the target
   // offset, but the drei offset DAMPS up from wherever it was frozen (~0.06 after
