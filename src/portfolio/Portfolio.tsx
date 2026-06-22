@@ -330,7 +330,7 @@ export default function Portfolio({
               <div className="pf-cta">
                 <button
                   type="button"
-                  className="pf-btn pf-btn--primary"
+                  className="pf-btn"
                   onClick={scrollToWork}
                 >
                   View Work
